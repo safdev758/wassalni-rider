@@ -1,7 +1,7 @@
 // Arabic (RTL) - Algeria Localization
 export const arStrings = {
   // App
-  appName: 'وصّلني',
+  appName: 'وصالني',
 
   // Auth
   auth: {
@@ -12,7 +12,7 @@ export const arStrings = {
     password: 'كلمة المرور',
     forgotPassword: 'نسيت كلمة المرور؟',
     createAccount: 'إنشاء حساب',
-    newToYassir: 'جديد على وصّلني؟',
+    newToWasselni: 'جديد على وصالني؟',
     otpVerification: 'التحقق من الرمز',
     enterOtp: 'أدخل الرمز المرسل إلى',
     resendCode: 'إعادة إرسال الرمز',
@@ -105,11 +105,15 @@ export const arStrings = {
 
   // Ride Options
   rideOptions: {
-    kineticCore: 'وصّلني Go',
-    kineticPremium: 'وصّلني بلس',
-    kineticSpace: 'وصّلني XL',
+    wasselniCore: 'وصالني Go',
+    wasselniPremium: 'وصالني بلس',
+    wasselniSpace: 'وصالني XL',
     premiumRider: 'بريميوم',
     changePayment: 'تغيير',
+    findingOptimalRoute: 'جاري إيجاد أفضل مسار',
+    seatsSuffix: 'مقاعد',
+    etaAway: 'بعيد',
+    cashPayment: 'نقداً',
   },
 
   // Wallet
@@ -158,7 +162,7 @@ export const arStrings = {
   privacyPolicy: {
     title: 'سياسة الخصوصية',
     lastUpdated: 'آخر تحديث: يناير 2024',
-    intro: 'وصّلني ملتزم بحماية خصوصيتك. تشرح هذه السياسة كيف نجمع ونستخدم ونحمي معلوماتك الشخصية.',
+    intro: 'وصالني ملتزم بحماية خصوصيتك. تشرح هذه السياسة كيف نجمع ونستخدم ونحمي معلوماتك الشخصية.',
     informationWeCollect: 'المعلومات التي نجمعها',
     collectPersonal: '• معلومات شخصية (الاسم، رقم الهاتف، البريد الإلكتروني)',
     collectLocation: '• بيانات الموقع لطلبات الرحلات والتتبع',
@@ -177,7 +181,7 @@ export const arStrings = {
   termsOfService: {
     title: 'شروط الخدمة',
     lastUpdated: 'آخر تحديث: يناير 2024',
-    intro: 'باستخدام وصّلني، أنت توافق على هذه الشروط. يرجى قراءتها بعناية.',
+    intro: 'باستخدام وصالني، أنت توافق على هذه الشروط. يرجى قراءتها بعناية.',
     acceptance: 'قبول الشروط',
     acceptanceText: 'من خلال الوصول إلى خدمتنا أو استخدامها، أنت توافق على الالتزام بهذه الشروط.',
     userResponsibilities: 'مسؤوليات المستخدم',

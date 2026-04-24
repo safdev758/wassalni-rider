@@ -29,8 +29,8 @@ const SAVED_LOCATIONS = [
 ];
 
 const RECENT_LOCATIONS = [
-  { id: '1', name: 'The Ritz-Carlton', address: '181 Peachtree St NE' },
-  { id: '2', name: 'Houari Boumediene Airport', address: 'North Terminal Drop-off' },
+  { id: '1', name: 'Place des Martyrs', address: 'Alger-Centre, Algiers' },
+  { id: '2', name: 'Houari Boumediene Airport', address: 'Terminal 2 Drop-off' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -47,7 +47,7 @@ export const HomeScreen: React.FC = () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission to access location was denied');
+          Alert.alert(t('errors.locationPermissionDenied'));
           return;
         }
 
@@ -63,13 +63,15 @@ export const HomeScreen: React.FC = () => {
     })();
   }, []);
 
+  const currentAddress = t('home.currentLocation');
+
   const handleSearchPress = () => {
-    startSearch('1240 Techwood Drive NW', 'JFK International Airport');
+    startSearch(currentAddress, t('home.enterDestination'));
     navigation.navigate('Searching');
   };
 
   const handleLocationPress = (location: string) => {
-    startSearch('1240 Techwood Drive NW', location);
+    startSearch(currentAddress, location);
     navigation.navigate('Searching');
   };
 
@@ -158,10 +160,10 @@ export const HomeScreen: React.FC = () => {
             </View>
             <View style={styles.locationTextContainer}>
               <Text style={styles.currentLocationTitle}>
-                1240 Techwood Drive NW
+                {t('home.currentLocation')}
               </Text>
               <Text style={styles.currentLocationAddress}>
-                {t('home.currentLocation')}
+                {t('home.aroundYou')}
               </Text>
             </View>
           </View>

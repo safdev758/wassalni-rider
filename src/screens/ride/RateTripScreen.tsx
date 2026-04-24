@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -10,6 +11,7 @@ import { useRide } from '../../context/RideContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { formatCurrency } from '../../utils/format';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -20,13 +22,14 @@ const COMPLIMENTS = [
   { id: 'music', icon: 'musical-notes', label: 'Awesome Music' },
 ];
 
-const TIP_OPTIONS = ['$5', '$10', '$15', 'Custom'];
+const TIP_OPTIONS_DZD = [50, 100, 200];
 
 export const RateTripScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
   const { driver, submitRating, resetRide } = useRide();
   const [rating, setRating] = useState(0);
-  const [selectedTip, setSelectedTip] = useState('$10');
+  const [selectedTip, setSelectedTip] = useState<number>(100);
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
   const [note, setNote] = useState('');
 
@@ -41,7 +44,7 @@ export const RateTripScreen: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    submitRating(rating, parseInt(selectedTip.replace('$', '')) || 0, selectedCompliments);
+    submitRating(rating, selectedTip, selectedCompliments);
     resetRide();
     navigation.navigate('Main');
   };
@@ -61,7 +64,7 @@ export const RateTripScreen: React.FC = () => {
         >
           <Ionicons name="close" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>WESSALNI</Text>
+        <Text style={styles.topBarTitle}>{t('appName')}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -75,8 +78,8 @@ export const RateTripScreen: React.FC = () => {
               <Ionicons name="star" size={14} color={colors.primary} />
             </View>
           </View>
-          <Text style={styles.driverTitle}>How was your ride with {driver.name}?</Text>
-          <Text style={styles.driverSubtitle}>Black SUV • Wessalni Plus</Text>
+          <Text style={styles.driverTitle}>{t('ride.howWasYourRide')}</Text>
+          <Text style={styles.driverSubtitle}>{driver.vehicle}</Text>
         </View>
 
         {/* Stars */}
@@ -98,7 +101,7 @@ export const RateTripScreen: React.FC = () => {
 
         {/* Compliments */}
         <View style={styles.complimentsSection}>
-          <Text style={styles.sectionTitle}>Select Compliments</Text>
+          <Text style={styles.sectionTitle}>{t('ride.rateYourTrip')}</Text>
           <View style={styles.complimentsGrid}>
             {COMPLIMENTS.map(comp => (
               <TouchableOpacity
@@ -128,15 +131,14 @@ export const RateTripScreen: React.FC = () => {
 
         {/* Tipping */}
         <View style={styles.tipSection}>
-          <Text style={styles.sectionTitle}>Add a Tip for {driver.name}</Text>
+          <Text style={styles.sectionTitle}>{t('ride.tipDriver')}</Text>
           <View style={styles.tipGrid}>
-            {TIP_OPTIONS.map(tip => (
+            {TIP_OPTIONS_DZD.map(tip => (
               <TouchableOpacity
                 key={tip}
                 style={[
                   styles.tipButton,
                   selectedTip === tip && styles.tipButtonSelected,
-                  tip === 'Custom' && styles.tipButtonCustom,
                 ]}
                 onPress={() => setSelectedTip(tip)}
                 activeOpacity={0.9}
@@ -144,9 +146,8 @@ export const RateTripScreen: React.FC = () => {
                 <Text style={[
                   styles.tipButtonText,
                   selectedTip === tip && styles.tipButtonTextSelected,
-                  tip === 'Custom' && styles.tipButtonTextCustom,
                 ]}>
-                  {tip}
+                  {formatCurrency(tip)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -154,7 +155,7 @@ export const RateTripScreen: React.FC = () => {
           <View style={styles.noteInputContainer}>
             <TextInput
               style={styles.noteInput}
-              placeholder="Leave a note (optional)"
+              placeholder={t('ride.addTip')}
               placeholderTextColor={colors.onSurfaceVariant}
               value={note}
               onChangeText={setNote}
@@ -171,7 +172,7 @@ export const RateTripScreen: React.FC = () => {
           onPress={handleSubmit}
           activeOpacity={0.95}
         >
-          <Text style={styles.submitButtonText}>Submit Rating</Text>
+          <Text style={styles.submitButtonText}>{t('ride.submitRating')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

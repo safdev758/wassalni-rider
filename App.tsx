@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { I18nManager } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -11,6 +12,10 @@ import { RideProvider } from './src/context/RideContext';
 import { colors } from './src/theme/colors';
 
 export default function App() {
+  useEffect(() => {
+    I18nManager.allowRTL(true);
+  }, []);
+
   return (
     <SafeAreaProvider>
       <AuthProvider>

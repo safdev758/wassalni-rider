@@ -14,36 +14,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { formatCurrency } from '../../utils/format';
 
 const MOCK_ACTIVITIES = [
   {
     id: '1',
     date: 'Oct 24, 2023 • 9:42 PM',
-    destination: 'The Ritz-Carlton',
-    address: '10 Avenue des Arts',
-    price: '$142.50',
-    vehicle: 'Wessalni Plus',
-    carType: 'Mercedes-Benz S-Class',
+    destination: 'Place des Martyrs',
+    address: 'Alger-Centre, Algiers',
+    priceDzd: 850,
+    vehicle: 'Wasselni Plus',
+    carType: 'Renault Symbol',
     status: 'completed',
   },
   {
     id: '2',
     date: 'Oct 22, 2023 • 2:15 PM',
-    destination: 'International Airport',
-    address: 'Terminal 1 Arrivals',
-    price: '$215.00',
-    vehicle: 'Wessalni XL',
-    carType: 'Cadillac Escalade',
+    destination: 'Houari Boumediene Airport',
+    address: 'Terminal 2 Arrivals',
+    priceDzd: 1400,
+    vehicle: 'Wasselni XL',
+    carType: 'Dacia Logan MCV',
     status: 'completed',
   },
   {
     id: '3',
     date: 'Oct 18, 2023 • 7:30 AM',
-    destination: 'Financial District',
-    address: '450 Montgomery St',
-    price: '$0.00',
-    vehicle: 'Wessalni Plus',
-    carType: 'Audi A8',
+    destination: 'Bab Ezzouar Business District',
+    address: 'Cite des Bananiers',
+    priceDzd: 0,
+    vehicle: 'Wasselni Plus',
+    carType: 'Hyundai Accent',
     status: 'canceled',
   },
 ];
@@ -54,7 +55,7 @@ export const ActivityScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Activity</Text>
+        <Text style={styles.headerTitle}>{t('activity.title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -67,7 +68,7 @@ export const ActivityScreen: React.FC = () => {
                 <Text style={styles.activityAddress}>{activity.address}</Text>
               </View>
               <View style={styles.activityPrice}>
-                <Text style={styles.priceText}>{activity.price}</Text>
+                <Text style={styles.priceText}>{formatCurrency(activity.priceDzd)}</Text>
                 <View style={[
                   styles.statusBadge,
                   activity.status === 'completed' ? styles.statusCompleted : styles.statusCanceled,
@@ -81,7 +82,7 @@ export const ActivityScreen: React.FC = () => {
                     styles.statusText,
                     activity.status === 'completed' ? styles.statusTextCompleted : styles.statusTextCanceled,
                   ]}>
-                    {activity.status === 'completed' ? 'Completed' : 'Canceled'}
+                    {activity.status === 'completed' ? t('ride.tripCompleted') : t('common.cancel')}
                   </Text>
                 </View>
               </View>
@@ -109,15 +110,15 @@ export const ActivityScreen: React.FC = () => {
                   {activity.carType}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => Alert.alert('Receipt', 'Receipt details coming soon.')}>
-                <Text style={styles.receiptText}>Receipt</Text>
+              <TouchableOpacity onPress={() => Alert.alert(t('common.loading'), t('activity.noTripsYet'))}>
+                <Text style={styles.receiptText}>{t('common.more')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         ))}
 
-        <TouchableOpacity style={styles.loadMoreButton} onPress={() => Alert.alert('Activity', 'More ride history coming soon.')}>
-          <Text style={styles.loadMoreButtonText}>Load More Activity</Text>
+        <TouchableOpacity style={styles.loadMoreButton} onPress={() => Alert.alert(t('activity.title'), t('common.loading'))}>
+          <Text style={styles.loadMoreButtonText}>{t('common.seeAll')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

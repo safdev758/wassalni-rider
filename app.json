@@ -1,24 +1,37 @@
 {
   "expo": {
-    "name": "Wessalni",
-    "slug": "wessalni",
+    "name": "Wasselni",
+    "slug": "wassalni-rider",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wessalni.app",
-      "buildNumber": "1.0.0"
+      "bundleIdentifier": "com.wassalni.rider",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Wasselni needs your location to find nearby drivers and calculate your ride price.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Wasselni needs your location to find nearby drivers and calculate your ride price."
+      }
     },
     "android": {
-      "package": "com.wessalni.app",
-      "versionCode": 1
+      "package": "com.wassalni.rider",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "plugins": [
       "expo-localization",
       "expo-secure-store",
-      "expo-location"
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Wasselni needs your location to find nearby drivers and calculate your ride price."
+        }
+      ]
     ]
   }
 }

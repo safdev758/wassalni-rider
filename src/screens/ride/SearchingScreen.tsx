@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -14,6 +15,7 @@ import { spacing } from '../../theme/spacing';
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const SearchingScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
   const { cancelRide, state } = useRide();
 
@@ -62,7 +64,7 @@ export const SearchingScreen: React.FC = () => {
             <Ionicons name="car" size={20} color={colors.onSurfaceVariant} />
           </View>
           <View>
-            <Text style={styles.contextTitle}>Wessalni Plus</Text>
+            <Text style={styles.contextTitle}>{t('rideOptions.wasselniPremium')}</Text>
             <Text style={styles.contextSubtitle}>Est. wait 2-4 mins</Text>
           </View>
         </View>

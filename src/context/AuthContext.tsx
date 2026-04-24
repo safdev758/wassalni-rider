@@ -43,9 +43,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         id: 'usr_001',
         name: 'Ahmed Benali',
         phone,
-        email: 'ahmed.benali@example.com',
-        totalRides: 42,
-        avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+        email: '',
+        totalRides: 0,
       },
     });
   };

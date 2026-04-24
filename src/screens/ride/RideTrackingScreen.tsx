@@ -61,8 +61,8 @@ export const RideTrackingScreen: React.FC = () => {
               </View>
             </View>
             <View>
-              <Text style={styles.driverName}>Marcus</Text>
-              <Text style={styles.driverVehicle}>KNT-8492 • Wessalni Black</Text>
+              <Text style={styles.driverName}>{driver?.name ?? ''}</Text>
+              <Text style={styles.driverVehicle}>{driver?.plate ?? ''} • {driver?.vehicle ?? ''}</Text>
             </View>
           </View>
           <View style={styles.vehicleIcon}>

@@ -56,7 +56,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Brand */}
           <View style={styles.brandSection}>
-            <Text style={styles.brandName}>WESSALNI</Text>
+            <Text style={styles.brandName}>{t('appName').toUpperCase()}</Text>
           </View>
 
           {/* Header */}
@@ -168,7 +168,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Sign up link */}
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>New to Wessalni?</Text>
+            <Text style={styles.signupText}>{t('auth.newToWasselni')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
               <Text style={styles.signupLink}>Create an account</Text>
             </TouchableOpacity>
