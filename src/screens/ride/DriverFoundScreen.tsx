@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -14,6 +15,7 @@ import { spacing } from '../../theme/spacing';
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const DriverFoundScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
   const { driver, state, cancelRide } = useRide();
 
@@ -39,7 +41,7 @@ export const DriverFoundScreen: React.FC = () => {
           <Ionicons name="close" size={24} color={colors.onSurface} />
         </TouchableOpacity>
         <View style={styles.etaBadge}>
-          <Text style={styles.etaBadgeText}>ETA 4 Min</Text>
+          <Text style={styles.etaBadgeText}>{t('ride.estimatedTime')} 4 {t('ride.minAway')}</Text>
         </View>
       </View>
 
@@ -50,7 +52,7 @@ export const DriverFoundScreen: React.FC = () => {
             <Ionicons name="person" size={24} color={colors.onSurface} />
           </View>
           <View style={styles.arrivingBadge}>
-            <Text style={styles.arrivingBadgeText}>ALEX IS ARRIVING</Text>
+            <Text style={styles.arrivingBadgeText}>{(driver?.name ?? '').toUpperCase()} {t('ride.onTheWay').toUpperCase()}</Text>
           </View>
         </View>
       </View>
@@ -58,7 +60,7 @@ export const DriverFoundScreen: React.FC = () => {
       {/* Bottom sheet */}
       <View style={styles.bottomSheet}>
         <View style={styles.dragHandle} />
-        <Text style={styles.bottomTitle}>Your driver is arriving soon.</Text>
+        <Text style={styles.bottomTitle}>{t('ride.yourDriverIsArriving')}</Text>
 
         {/* Driver details */}
         <View style={styles.driverDetails}>
@@ -77,24 +79,24 @@ export const DriverFoundScreen: React.FC = () => {
           </View>
           <View style={styles.plateContainer}>
             <Text style={styles.plateText}>{driver.plate}</Text>
-            <Text style={styles.plateLabel}>License Plate</Text>
+            <Text style={styles.plateLabel}>{t('ride.licensePlate')}</Text>
           </View>
         </View>
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => Alert.alert('Message', 'In-app messaging coming soon.')}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => Alert.alert(t('ride.message'), t('common.loading'))}>
             <Ionicons name="chatbubble" size={20} color={colors.primary} />
-            <Text style={styles.secondaryButtonText}>Message</Text>
+            <Text style={styles.secondaryButtonText}>{t('ride.message')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => Alert.alert('Call Driver', 'Calling feature coming soon.')}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => Alert.alert(t('ride.callDriver'), t('common.loading'))}>
             <Ionicons name="call" size={20} color={colors.surface} />
-            <Text style={styles.primaryButtonText}>Call Driver</Text>
+            <Text style={styles.primaryButtonText}>{t('ride.callDriver')}</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.shareButton} onPress={() => Alert.alert('Share Trip', 'Trip sharing feature coming soon.')}>
-          <Text style={styles.shareButtonText}>Share Trip Status</Text>
+        <TouchableOpacity style={styles.shareButton} onPress={() => Alert.alert(t('ride.shareTripStatus'), t('common.loading'))}>
+          <Text style={styles.shareButtonText}>{t('ride.shareTripStatus')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

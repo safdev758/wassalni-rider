@@ -1,7 +1,7 @@
 // English (LTR) - Algeria Localization
 export const enStrings = {
   // App
-  appName: 'Wessalni',
+  appName: 'Wasselni',
 
   // Auth
   auth: {
@@ -12,7 +12,7 @@ export const enStrings = {
     password: 'Password',
     forgotPassword: 'Forgot Password?',
     createAccount: 'Create Account',
-    newToYassir: 'New to Wessalni?',
+    newToWasselni: 'New to Wasselni?',
     otpVerification: 'OTP Verification',
     enterOtp: 'Enter the code sent to',
     resendCode: 'Resend Code',
@@ -105,11 +105,15 @@ export const enStrings = {
 
   // Ride Options
   rideOptions: {
-    kineticCore: 'Wessalni Go',
-    kineticPremium: 'Wessalni Plus',
-    kineticSpace: 'Wessalni XL',
+    wasselniCore: 'Wasselni Go',
+    wasselniPremium: 'Wasselni Plus',
+    wasselniSpace: 'Wasselni XL',
     premiumRider: 'Premium',
     changePayment: 'Change',
+    findingOptimalRoute: 'Finding optimal route',
+    seatsSuffix: 'seats',
+    etaAway: 'away',
+    cashPayment: 'Cash',
   },
 
   // Wallet
@@ -158,7 +162,7 @@ export const enStrings = {
   privacyPolicy: {
     title: 'Privacy Policy',
     lastUpdated: 'Last updated: January 2024',
-    intro: 'Wessalni is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your personal information.',
+    intro: 'Wasselni is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your personal information.',
     informationWeCollect: 'Information We Collect',
     collectPersonal: '• Personal information (name, phone number, email)',
     collectLocation: '• Location data for ride requests and tracking',
@@ -177,7 +181,7 @@ export const enStrings = {
   termsOfService: {
     title: 'Terms of Service',
     lastUpdated: 'Last updated: January 2024',
-    intro: 'By using Wessalni, you agree to these terms. Please read them carefully.',
+    intro: 'By using Wasselni, you agree to these terms. Please read them carefully.',
     acceptance: 'Acceptance of Terms',
     acceptanceText: 'By accessing or using our service, you agree to be bound by these terms.',
     userResponsibilities: 'User Responsibilities',

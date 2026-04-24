@@ -1,6 +1,6 @@
-# Wessalni API Contracts
+# Wasselni API Contracts
 
-This document outlines the API contracts for all buttons and actions in the Wessalni Rider App.
+This document outlines the API contracts for all buttons and actions in the Wasselni Rider App.
 
 ---
 
@@ -114,7 +114,7 @@ This document outlines the API contracts for all buttons and actions in the Wess
   "options": [
     {
       "id": "go",
-      "name": "Wessalni Go",
+      "name": "Wasselni Go",
       "seats": 4,
       "eta_minutes": 4,
       "price": 4500,
@@ -122,7 +122,7 @@ This document outlines the API contracts for all buttons and actions in the Wess
     },
     {
       "id": "plus",
-      "name": "Wessalni Plus",
+      "name": "Wasselni Plus",
       "seats": 4,
       "eta_minutes": 2,
       "price": 7200
@@ -248,7 +248,7 @@ This document outlines the API contracts for all buttons and actions in the Wess
 ```json
 {
   "emergency_contact": "police",
-  "share_link": "https://wessalni.dz/share/ride_001"
+  "share_link": "https://wasselni.dz/share/ride_001"
 }
 ```
 

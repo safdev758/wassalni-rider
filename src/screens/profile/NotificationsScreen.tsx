@@ -48,8 +48,8 @@ export const NotificationsScreen: React.FC = () => {
 
   const [history, setHistory] = useState<NotificationHistory[]>([
     { id: '1', title: 'Ride Completed', message: 'Your ride to JFK Airport was completed', time: '2 hours ago', type: 'ride', read: true },
-    { id: '2', title: 'Special Offer', message: 'Get 20% off your next ride with code WESSALNI20', time: 'Yesterday', type: 'promotion', read: false },
-    { id: '3', title: 'Payment Successful', message: 'Your payment of $145.00 was processed', time: '2 days ago', type: 'account', read: true },
+    { id: '2', title: 'Special Offer', message: 'Get 20% off your next ride with code WASSALNI20', time: 'Yesterday', type: 'promotion', read: false },
+    { id: '3', title: 'Payment Successful', message: 'Your payment of 1,400 DA was processed', time: '2 days ago', type: 'account', read: true },
     { id: '4', title: 'Driver Arrived', message: 'Your driver has arrived at pickup location', time: '3 days ago', type: 'ride', read: true },
   ]);
 

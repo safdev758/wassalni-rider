@@ -16,8 +16,8 @@ export type RideOption = {
   name: string;
   seats: number;
   eta: string;
-  price: string;
-  originalPrice?: string;
+  priceDzd: number;
+  originalPriceDzd?: number;
   selected: boolean;
 };
 
@@ -26,7 +26,7 @@ export type CompletedRide = {
   driver: Driver;
   pickup: string;
   dropoff: string;
-  price: string;
+  priceDzd: number;
   option: string;
   date: string;
   status: 'completed' | 'cancelled';
@@ -51,17 +51,17 @@ type RideContextType = {
 
 const MOCK_DRIVER: Driver = {
   id: 'drv_001',
-  name: 'Alex',
+  name: 'Karim',
   rating: 4.9,
-  vehicle: 'Tesla Model 3 • Black',
-  plate: 'XYZ 123',
+  vehicle: 'Renault Symbol • White',
+  plate: '00123-119-16',
   photoUrl: '',
 };
 
 const MOCK_OPTIONS: RideOption[] = [
-  { id: 'go', name: 'Wessalni Go', seats: 4, eta: '4 min', price: '$45.00', originalPrice: '$52.00', selected: false },
-  { id: 'plus', name: 'Wessalni Plus', seats: 4, eta: '2 min', price: '$72.00', selected: true },
-  { id: 'xl', name: 'Wessalni XL', seats: 6, eta: '7 min', price: '$95.00', selected: false },
+  { id: 'go', name: 'Wasselni Go', seats: 4, eta: '4 min', priceDzd: 650, originalPriceDzd: 800, selected: false },
+  { id: 'plus', name: 'Wasselni Plus', seats: 4, eta: '2 min', priceDzd: 950, selected: true },
+  { id: 'xl', name: 'Wasselni XL', seats: 6, eta: '7 min', priceDzd: 1400, selected: false },
 ];
 
 const RideContext = createContext<RideContextType>({
@@ -130,7 +130,7 @@ export const RideProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         driver,
         pickup,
         dropoff,
-        price: selectedOption.price,
+        priceDzd: selectedOption.priceDzd,
         option: selectedOption.name,
         date: new Date().toLocaleDateString(),
         status: 'completed',

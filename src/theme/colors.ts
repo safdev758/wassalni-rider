@@ -1,5 +1,5 @@
 // Premium Mobility Design System - Colors
-// Based on "The Kinetic Gallery" design philosophy
+// Based on the "Stitch" design philosophy
 
 export const colors = {
   // Primary - Electric Premium Blue

@@ -1,4 +1,4 @@
-# Yassir Rider App
+# Wasselni Rider App
 
 A React Native Expo application for riders to request and track rides, built with TypeScript and following the "Stitch" design system.
 

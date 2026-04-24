@@ -14,33 +14,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { formatCurrency, formatSignedCurrency } from '../../utils/format';
 
-const MOCK_BALANCE = 4250;
+const MOCK_BALANCE_DZD = 4250;
 const MOCK_PAYMENT_METHODS = [
-  { id: '1', type: 'card', name: 'Black Card', last4: '4921', isDefault: true },
-  { id: '2', type: 'wallet', name: 'Apple Pay', isDefault: false },
+  { id: '1', type: 'card', nameKey: 'wallet.defaultCard', name: 'CIB Card', last4: '4921', isDefault: true },
+  { id: '2', type: 'wallet', nameKey: 'rideOptions.cashPayment', name: 'Cash', isDefault: false },
 ];
-const MOCK_TRANSACTIONS = [
+const MOCK_TRANSACTIONS: Array<{
+  id: string;
+  type: 'credit' | 'debit';
+  description: string;
+  date: string;
+  amountDzd: number;
+}> = [
   {
     id: '1',
     type: 'debit',
-    description: 'S-Class Transfer',
-    date: 'Today, 2:45 PM • JFK Airport',
-    amount: '-$145.00',
+    description: 'Airport run',
+    date: 'Today, 2:45 PM • Houari Boumediene Airport',
+    amountDzd: -1400,
   },
   {
     id: '2',
     type: 'credit',
     description: 'Funds Added',
-    date: 'Yesterday, 9:00 AM • Black Card',
-    amount: '+$500.00',
+    date: 'Yesterday, 9:00 AM • CIB Card',
+    amountDzd: 3000,
   },
   {
     id: '3',
     type: 'debit',
-    description: 'Phantom Evening',
-    date: 'Oct 12, 8:30 PM • Midtown',
-    amount: '-$320.00',
+    description: 'Evening ride',
+    date: 'Oct 12, 8:30 PM • Hydra',
+    amountDzd: -850,
   },
 ];
 
@@ -50,7 +57,7 @@ export const WalletScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>WESSALNI</Text>
+        <Text style={styles.headerTitle}>{t('appName')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -58,15 +65,15 @@ export const WalletScreen: React.FC = () => {
         <View style={styles.balanceCard}>
           <View style={styles.balanceGradient} />
           <View style={styles.balanceContent}>
-            <Text style={styles.balanceLabel}>Balance</Text>
-            <Text style={styles.balanceAmount}>${MOCK_BALANCE.toLocaleString()}.00</Text>
+            <Text style={styles.balanceLabel}>{t('wallet.balance')}</Text>
+            <Text style={styles.balanceAmount}>{formatCurrency(MOCK_BALANCE_DZD)}</Text>
             <View style={styles.balanceActions}>
-              <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert('Add Funds', 'Add funds feature coming soon.')}>
+              <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert(t('wallet.addFunds'), t('common.loading'))}>
                 <Ionicons name="add" size={18} color={colors.surfaceContainerLowest} />
-                <Text style={styles.addButtonText}>Add Funds</Text>
+                <Text style={styles.addButtonText}>{t('wallet.addFunds')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.withdrawButton} onPress={() => Alert.alert('Withdraw', 'Withdraw feature coming soon.')}>
-                <Text style={styles.withdrawButtonText}>Withdraw</Text>
+              <TouchableOpacity style={styles.withdrawButton} onPress={() => Alert.alert(t('wallet.withdraw'), t('common.loading'))}>
+                <Text style={styles.withdrawButtonText}>{t('wallet.withdraw')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -74,7 +81,7 @@ export const WalletScreen: React.FC = () => {
 
         {/* Payment Methods */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Methods</Text>
+          <Text style={styles.sectionTitle}>{t('wallet.paymentMethods')}</Text>
           <View style={styles.paymentGrid}>
             {MOCK_PAYMENT_METHODS.map((method) => (
               <TouchableOpacity
@@ -83,7 +90,7 @@ export const WalletScreen: React.FC = () => {
                   styles.paymentCard,
                   method.isDefault && styles.paymentCardDefault,
                 ]}
-                onPress={() => Alert.alert(method.name, method.isDefault ? 'This is your default payment method.' : 'Payment method details coming soon.')}
+                onPress={() => Alert.alert(method.name, method.isDefault ? t('wallet.default') : t('common.loading'))}
               >
                 <View style={styles.paymentLeft}>
                   <View style={styles.paymentIconContainer}>
@@ -102,7 +109,7 @@ export const WalletScreen: React.FC = () => {
                 </View>
                 {method.isDefault && (
                   <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultBadgeText}>Default</Text>
+                    <Text style={styles.defaultBadgeText}>{t('wallet.default')}</Text>
                   </View>
                 )}
                 {!method.isDefault && (
@@ -110,16 +117,16 @@ export const WalletScreen: React.FC = () => {
                 )}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity style={styles.addPaymentButton} onPress={() => Alert.alert('Add Payment', 'Add payment method feature coming soon.')}>
+            <TouchableOpacity style={styles.addPaymentButton} onPress={() => Alert.alert(t('wallet.addNewMethod'), t('common.loading'))}>
               <Ionicons name="add-circle" size={20} color={colors.primary} />
-              <Text style={styles.addPaymentText}>Add New Method</Text>
+              <Text style={styles.addPaymentText}>{t('wallet.addNewMethod')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Recent Activity */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>{t('wallet.recentActivity')}</Text>
           {MOCK_TRANSACTIONS.map((transaction) => (
             <View key={transaction.id} style={styles.transactionItem}>
               <View style={styles.transactionIconContainer}>
@@ -137,12 +144,12 @@ export const WalletScreen: React.FC = () => {
                 styles.transactionAmount,
                 transaction.type === 'credit' && styles.creditAmount,
               ]}>
-                {transaction.amount}
+                {formatSignedCurrency(transaction.amountDzd)}
               </Text>
             </View>
           ))}
-          <TouchableOpacity style={styles.viewAllButton} onPress={() => Alert.alert('Activity', 'Full activity history coming soon.')}>
-            <Text style={styles.viewAllText}>View All Activity</Text>
+          <TouchableOpacity style={styles.viewAllButton} onPress={() => Alert.alert(t('activity.title'), t('common.loading'))}>
+            <Text style={styles.viewAllText}>{t('wallet.viewAllActivity')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

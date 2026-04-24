@@ -15,6 +15,7 @@ import { NotificationsScreen } from '../screens/profile/NotificationsScreen';
 import { PrivacyPolicyScreen } from '../screens/profile/PrivacyPolicyScreen';
 import { TermsOfServiceScreen } from '../screens/profile/TermsOfServiceScreen';
 import { HelpScreen } from '../screens/profile/HelpScreen';
+import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -37,11 +38,14 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
-  // Auth is optional - start with Main (Home) screen
-  const isAuthenticated = true;
+  // Guests can browse the map/home tab but must sign in before booking a ride
+  // or editing their profile. All auth screens stay registered so Profile's
+  // "Login" CTA can navigate to them from anywhere in the tree.
+  const { isAuthenticated } = useAuth();
 
   return (
     <Stack.Navigator
+      initialRouteName={isAuthenticated ? 'Main' : 'Login'}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: '#131313' },

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -10,10 +11,12 @@ import { useRide } from '../../context/RideContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { formatCurrency } from '../../utils/format';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const RideOptionsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
   const { options, selectOption, confirmRide, pickup, dropoff } = useRide();
 
@@ -29,7 +32,7 @@ export const RideOptionsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.routeBadge}>
           <View style={styles.routeDot} />
-          <Text style={styles.routeBadgeText}>Finding optimal route</Text>
+          <Text style={styles.routeBadgeText}>{t('rideOptions.findingOptimalRoute')}</Text>
         </View>
       </View>
 
@@ -43,12 +46,12 @@ export const RideOptionsScreen: React.FC = () => {
           </View>
           <View style={styles.routeTextContainer}>
             <View style={styles.routePoint}>
-              <Text style={styles.routeLabel}>Pickup</Text>
-              <Text style={styles.routeAddress}>{pickup || '152 W 57th St'}</Text>
+              <Text style={styles.routeLabel}>{t('ride.pickup')}</Text>
+              <Text style={styles.routeAddress}>{pickup || t('home.currentLocation')}</Text>
             </View>
             <View style={styles.routePoint}>
-              <Text style={styles.routeLabel}>Dropoff</Text>
-              <Text style={styles.routeAddress}>{dropoff || 'JFK International Airport'}</Text>
+              <Text style={styles.routeLabel}>{t('ride.dropoff')}</Text>
+              <Text style={styles.routeAddress}>{dropoff || t('home.enterDestination')}</Text>
             </View>
           </View>
         </View>
@@ -82,16 +85,16 @@ export const RideOptionsScreen: React.FC = () => {
                     </View>
                     <View style={styles.optionBadges}>
                       <View style={styles.seatBadge}>
-                        <Text style={styles.seatBadgeText}>{option.seats} seats</Text>
+                        <Text style={styles.seatBadgeText}>{option.seats} {t('rideOptions.seatsSuffix')}</Text>
                       </View>
-                      <Text style={styles.etaText}>{option.eta} away</Text>
+                      <Text style={styles.etaText}>{option.eta} {t('rideOptions.etaAway')}</Text>
                     </View>
                   </View>
                 </View>
                 <View style={styles.optionPrice}>
-                  <Text style={styles.priceText}>{option.price}</Text>
-                  {option.originalPrice && (
-                    <Text style={styles.originalPrice}>{option.originalPrice}</Text>
+                  <Text style={styles.priceText}>{formatCurrency(option.priceDzd)}</Text>
+                  {option.originalPriceDzd !== undefined && (
+                    <Text style={styles.originalPrice}>{formatCurrency(option.originalPriceDzd)}</Text>
                   )}
                 </View>
               </View>
@@ -107,10 +110,10 @@ export const RideOptionsScreen: React.FC = () => {
             <View style={styles.paymentIconContainer}>
               <Ionicons name="card" size={20} color={colors.onSurface} />
             </View>
-            <Text style={styles.paymentName}>Apple Pay</Text>
+            <Text style={styles.paymentName}>{t('rideOptions.cashPayment')}</Text>
           </View>
-          <TouchableOpacity onPress={() => Alert.alert('Payment', 'Change payment method feature coming soon.')}>
-            <Text style={styles.changePaymentText}>Change</Text>
+          <TouchableOpacity onPress={() => Alert.alert(t('wallet.paymentMethods'), t('common.loading'))}>
+            <Text style={styles.changePaymentText}>{t('rideOptions.changePayment')}</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -119,7 +122,7 @@ export const RideOptionsScreen: React.FC = () => {
           activeOpacity={0.95}
         >
           <Text style={styles.confirmButtonText}>
-            Confirm {options.find(o => o.selected)?.name || 'Ride'}
+            {t('ride.confirm')} {options.find(o => o.selected)?.name ?? ''}
           </Text>
           <Ionicons name="arrow-forward" size={20} color={colors.surface} />
         </TouchableOpacity>
