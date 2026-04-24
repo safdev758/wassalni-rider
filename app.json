@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Wessalni",
+    "slug": "wessalni",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wessalni.app",
+      "buildNumber": "1.0.0"
+    },
+    "android": {
+      "package": "com.wessalni.app",
+      "versionCode": 1
+    },
+    "plugins": [
+      "expo-localization",
+      "expo-secure-store",
+      "expo-location"
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# React Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+project.xcworkspace/
+xcuserdata/
+
+# iOS
+ios/Pods/
+ios/build/
+
+# Android
+android/build/
+android/app/build/
+android/.gradle/
+android/app/.gradle/
+
+# Environment
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Bundle
+*.jsbundle
