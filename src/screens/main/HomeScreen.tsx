@@ -30,7 +30,7 @@ type RecentLocation = { id: string; name: string; address: string };
 export const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { startSearch } = useRide();
+  const { startSearch, setPickupLocation, setDropoffLocation } = useRide();
   const [location, setLocation] = useState<{ latitude: number; longitude: number }>({
     latitude: 36.7538,
     longitude: 3.0588,
@@ -65,12 +65,15 @@ export const HomeScreen: React.FC = () => {
   const currentAddress = t('home.currentLocation');
 
   const handleSearchPress = () => {
+    setPickupLocation({ address: currentAddress, latitude: location.latitude, longitude: location.longitude });
     startSearch(currentAddress, t('home.enterDestination'));
     navigation.navigate('Searching');
   };
 
-  const handleLocationPress = (location: string) => {
-    startSearch(currentAddress, location);
+  const handleLocationPress = (saved: SavedLocation) => {
+    setPickupLocation({ address: currentAddress, latitude: location.latitude, longitude: location.longitude });
+    setDropoffLocation({ address: saved.address, latitude: saved.lat, longitude: saved.lng });
+    startSearch(currentAddress, saved.address);
     navigation.navigate('Searching');
   };
 
@@ -175,7 +178,7 @@ export const HomeScreen: React.FC = () => {
                 <TouchableOpacity
                   key={loc.id}
                   style={styles.suggestedCard}
-                  onPress={() => handleLocationPress(loc.address)}
+                  onPress={() => handleLocationPress(loc)}
                   activeOpacity={0.9}
                 >
                   <View style={styles.suggestedIconContainer}>
@@ -200,7 +203,11 @@ export const HomeScreen: React.FC = () => {
               <TouchableOpacity
                 key={loc.id}
                 style={styles.recentItem}
-                onPress={() => handleLocationPress(loc.address)}
+                onPress={() => {
+                  setPickupLocation({ address: currentAddress, latitude: location.latitude, longitude: location.longitude });
+                  startSearch(currentAddress, loc.address);
+                  navigation.navigate('Searching');
+                }}
                 activeOpacity={0.9}
               >
                 <View style={styles.recentIconContainer}>

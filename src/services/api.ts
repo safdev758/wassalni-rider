@@ -1,5 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 const API_BASE_URL = __DEV__
   ? 'http://localhost:8080/api/v1'
   : 'https://api.wasselni.dz/api/v1';
@@ -12,19 +10,9 @@ let accessToken: string | null = null;
 
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
-  if (token) {
-    AsyncStorage.setItem('access_token', token);
-  } else {
-    AsyncStorage.removeItem('access_token');
-  }
 };
 
 export const getAccessToken = () => accessToken;
-
-export const loadStoredToken = async () => {
-  accessToken = await AsyncStorage.getItem('access_token');
-  return accessToken;
-};
 
 const headers = (): HeadersInit => {
   const h: HeadersInit = { 'Content-Type': 'application/json' };

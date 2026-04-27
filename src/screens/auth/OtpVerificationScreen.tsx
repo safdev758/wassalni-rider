@@ -12,6 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { colors } from '../../theme/colors';
@@ -28,6 +29,7 @@ export const OtpVerificationScreen: React.FC<Props> = ({
 }) => {
   const { t } = useTranslation();
   const { phoneNumber } = route.params;
+  const { verifyOTP, sendOTP } = useAuth();
   const [otp, setOtp] = useState('');
   const [timer, setTimer] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,16 +52,23 @@ export const OtpVerificationScreen: React.FC<Props> = ({
   const handleVerify = async () => {
     if (otp.length !== OTP_LENGTH) return;
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await verifyOTP(phoneNumber, otp);
       navigation.navigate('Main');
-    }, 1500);
+    } catch (error) {
+      console.error('OTP verification failed:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setTimer(60);
-    // TODO: Implement resend OTP
+    try {
+      await sendOTP(phoneNumber);
+    } catch (error) {
+      console.error('Resend OTP failed:', error);
+    }
   };
 
   const formatPhoneNumber = (phone: string) => {

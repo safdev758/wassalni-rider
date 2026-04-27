@@ -1,5 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI, userAPI, setAccessToken, loadStoredToken, connectWebSocket, disconnectWebSocket } from '../services/api';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import { authAPI, userAPI, setAccessToken, connectWebSocket, disconnectWebSocket } from '../services/api';
+
+const TOKEN_KEY = 'rider_access_token';
+
+const storeToken = async (token: string | null) => {
+  if (Platform.OS === 'web') return;
+  if (token) {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } else {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  }
+};
+
+const loadToken = async (): Promise<string | null> => {
+  if (Platform.OS === 'web') return null;
+  return SecureStore.getItemAsync(TOKEN_KEY);
+};
 
 type User = {
   id: string;
@@ -20,8 +38,8 @@ type AuthState = {
 type AuthContextType = AuthState & {
   sendOTP: (phone: string) => Promise<void>;
   verifyOTP: (phone: string, code: string) => Promise<void>;
-  login: (phone: string) => void;
-  signup: (name: string, phone: string) => void;
+  login: (phone: string) => Promise<void>;
+  signup: (name: string, phone: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
 };
@@ -33,8 +51,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   sendOTP: async () => {},
   verifyOTP: async () => {},
-  login: () => {},
-  signup: () => {},
+  login: async () => {},
+  signup: async () => {},
   logout: () => {},
   updateProfile: async () => {},
 });
@@ -48,8 +66,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   });
 
   useEffect(() => {
-    loadStoredToken().then(async (token) => {
+    loadToken().then(async (token) => {
       if (token) {
+        setAccessToken(token);
         try {
           const profile = await userAPI.getProfile();
           setAuth({
@@ -83,6 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const verifyOTP = async (phone: string, code: string) => {
     const response = await authAPI.verifyOTP(phone, code);
     setAccessToken(response.access_token);
+    await storeToken(response.access_token);
 
     const user = response.user;
     setAuth({
@@ -100,16 +120,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     connectWebSocket();
   };
 
-  const login = (phone: string) => {
-    sendOTP(phone).catch(console.error);
+  const login = async (phone: string) => {
+    await sendOTP(phone);
   };
 
-  const signup = (name: string, phone: string) => {
-    sendOTP(phone).catch(console.error);
+  const signup = async (name: string, phone: string) => {
+    await sendOTP(phone);
   };
 
   const logout = () => {
     setAccessToken(null);
+    storeToken(null);
     disconnectWebSocket();
     setAuth({
       isGuest: true,
