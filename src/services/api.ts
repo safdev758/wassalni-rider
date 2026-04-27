@@ -163,7 +163,7 @@ let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let wsIntentionalClose = false;
 
 export const connectWebSocket = () => {
-  if (wsConnection?.readyState === WebSocket.OPEN) return;
+  if (wsConnection?.readyState === WebSocket.OPEN || wsConnection?.readyState === WebSocket.CONNECTING) return;
   wsIntentionalClose = false;
 
   const url = `${WS_BASE_URL}/ws?token=${accessToken}`;
