@@ -63,9 +63,9 @@ export const OtpVerificationScreen: React.FC<Props> = ({
   };
 
   const handleResend = async () => {
-    setTimer(60);
     try {
       await sendOTP(phoneNumber);
+      setTimer(60);
     } catch (error) {
       console.error('Resend OTP failed:', error);
     }
