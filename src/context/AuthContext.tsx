@@ -89,11 +89,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           connectWebSocket();
         } catch {
           setAccessToken(null);
+          storeToken(null).catch(() => {});
           setAuth({ isGuest: true, isAuthenticated: false, user: null, isLoading: false });
         }
       } else {
         setAuth(prev => ({ ...prev, isLoading: false }));
       }
+    }).catch(() => {
+      setAuth({ isGuest: true, isAuthenticated: false, user: null, isLoading: false });
     });
   }, []);
 
