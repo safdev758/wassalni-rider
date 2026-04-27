@@ -57,7 +57,7 @@ export const RideTrackingScreen: React.FC = () => {
               <Ionicons name="person" size={24} color={colors.onSurface} />
               <View style={styles.ratingBadge}>
                 <Ionicons name="star" size={10} color={colors.primary} />
-                <Text style={styles.ratingText}>4.9</Text>
+                <Text style={styles.ratingText}>{driver?.rating?.toFixed(1) ?? ''}</Text>
               </View>
             </View>
             <View>
@@ -72,11 +72,11 @@ export const RideTrackingScreen: React.FC = () => {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.contactButton} onPress={() => Alert.alert('Contact Driver', 'Calling feature coming soon.')}>
+          <TouchableOpacity style={styles.contactButton} onPress={() => Alert.alert('Call Driver', 'WebRTC call coming soon')}>
             <Ionicons name="call" size={18} color={colors.surface} />
             <Text style={styles.contactButtonText}>Contact</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.safetyButton} onPress={() => Alert.alert('Safety', 'Emergency safety features coming soon.')}>
+          <TouchableOpacity style={styles.safetyButton} onPress={() => navigation.navigate('Report')}>
             <Ionicons name="shield" size={20} color={colors.onSurface} />
           </TouchableOpacity>
         </View>

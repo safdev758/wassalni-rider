@@ -34,11 +34,14 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogin = async () => {
     if (!phoneNumber) return;
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await login(phoneNumber);
+      navigation.navigate('OtpVerification', { phoneNumber });
+    } catch (error) {
+      console.error('Failed to send OTP:', error);
+    } finally {
       setIsLoading(false);
-      login(phoneNumber);
-      navigation.navigate('Main');
-    }, 2000);
+    }
   };
 
   return (
