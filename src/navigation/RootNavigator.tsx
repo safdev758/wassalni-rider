@@ -10,6 +10,8 @@ import { RideOptionsScreen } from '../screens/ride/RideOptionsScreen';
 import { DriverFoundScreen } from '../screens/ride/DriverFoundScreen';
 import { RideTrackingScreen } from '../screens/ride/RideTrackingScreen';
 import { RateTripScreen } from '../screens/ride/RateTripScreen';
+import { ChatScreen } from '../screens/ride/ChatScreen';
+import { ReportScreen } from '../screens/ride/ReportScreen';
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
 import { NotificationsScreen } from '../screens/profile/NotificationsScreen';
 import { PrivacyPolicyScreen } from '../screens/profile/PrivacyPolicyScreen';
@@ -28,6 +30,8 @@ export type RootStackParamList = {
   DriverFound: undefined;
   RideTracking: undefined;
   RateTrip: undefined;
+  Chat: undefined;
+  Report: undefined;
   EditProfile: undefined;
   Notifications: undefined;
   PrivacyPolicy: undefined;
@@ -60,6 +64,8 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen name="DriverFound" component={DriverFoundScreen} />
       <Stack.Screen name="RideTracking" component={RideTrackingScreen} />
       <Stack.Screen name="RateTrip" component={RateTripScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="Report" component={ReportScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />

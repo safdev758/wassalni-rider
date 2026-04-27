@@ -65,6 +65,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user: null,
     isLoading: true,
   });
+  const [pendingName, setPendingName] = useState<string | null>(null);
 
   useEffect(() => {
     loadToken().then(async (token) => {
@@ -130,6 +131,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isLoading: false,
     });
     connectWebSocket();
+
+    if (pendingName) {
+      userAPI.updateProfile({ name: pendingName }).catch(() => {});
+      setPendingName(null);
+    }
   };
 
   const login = async (phone: string) => {
@@ -137,12 +143,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signup = async (name: string, phone: string) => {
+    setPendingName(name);
     await sendOTP(phone);
   };
 
   const logout = () => {
     setAccessToken(null);
-    storeToken(null);
+    storeToken(null).catch(() => {});
     disconnectWebSocket();
     setAuth({
       isGuest: true,

@@ -167,6 +167,8 @@ let wsConnection: WebSocket | null = null;
 let wsHandlers: WSHandler[] = [];
 let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let wsIntentionalClose = false;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT = 5;
 
 export const connectWebSocket = () => {
   if (wsConnection?.readyState === WebSocket.OPEN || wsConnection?.readyState === WebSocket.CONNECTING) return;
@@ -177,7 +179,7 @@ export const connectWebSocket = () => {
   wsConnection = new WebSocket(url);
 
   wsConnection.onopen = () => {
-    console.log('[WS] Connected');
+    wsReconnectAttempts = 0;
     if (wsReconnectTimer) {
       clearTimeout(wsReconnectTimer);
       wsReconnectTimer = null;
@@ -193,16 +195,15 @@ export const connectWebSocket = () => {
     }
   };
 
-  wsConnection.onclose = () => {
-    console.log('[WS] Disconnected');
-    if (!wsIntentionalClose) {
-      wsReconnectTimer = setTimeout(connectWebSocket, 3000);
-    }
+  wsConnection.onclose = (event) => {
+    if (wsIntentionalClose) return;
+    if (event.code === 4001 || event.code === 4003 || event.code === 1008) return;
+    if (wsReconnectAttempts >= WS_MAX_RECONNECT) return;
+    wsReconnectAttempts++;
+    wsReconnectTimer = setTimeout(connectWebSocket, 3000);
   };
 
-  wsConnection.onerror = (err) => {
-    console.warn('[WS] Error:', err);
-  };
+  wsConnection.onerror = () => {};
 };
 
 export const disconnectWebSocket = () => {

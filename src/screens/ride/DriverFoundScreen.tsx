@@ -85,11 +85,11 @@ export const DriverFoundScreen: React.FC = () => {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Chat' as never)}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Chat')}>
             <Ionicons name="chatbubble" size={20} color={colors.primary} />
             <Text style={styles.secondaryButtonText}>{t('ride.message')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Call' as never)}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => Alert.alert(t('ride.callDriver'), 'WebRTC call coming soon')}>
             <Ionicons name="call" size={20} color={colors.surface} />
             <Text style={styles.primaryButtonText}>{t('ride.callDriver')}</Text>
           </TouchableOpacity>

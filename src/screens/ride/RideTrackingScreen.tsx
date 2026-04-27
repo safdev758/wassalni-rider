@@ -72,11 +72,11 @@ export const RideTrackingScreen: React.FC = () => {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.contactButton} onPress={() => navigation.navigate('Call' as never)}>
+          <TouchableOpacity style={styles.contactButton} onPress={() => Alert.alert('Call Driver', 'WebRTC call coming soon')}>
             <Ionicons name="call" size={18} color={colors.surface} />
             <Text style={styles.contactButtonText}>Contact</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.safetyButton} onPress={() => navigation.navigate('Report' as never)}>
+          <TouchableOpacity style={styles.safetyButton} onPress={() => navigation.navigate('Report')}>
             <Ionicons name="shield" size={20} color={colors.onSurface} />
           </TouchableOpacity>
         </View>

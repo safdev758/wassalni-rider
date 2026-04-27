@@ -61,12 +61,15 @@ export const ChatScreen: React.FC = () => {
   const sendMessage = async () => {
     if (!input.trim() || !rideId) return;
     const text = input.trim();
+    const optimisticId = `local-${Date.now()}`;
+    setMessages(prev => [...prev, { id: optimisticId, senderType: 'rider', content: text, createdAt: new Date().toISOString() }]);
     setInput('');
 
     try {
       await rideAPI.sendMessage(rideId, text);
     } catch (error) {
-      console.error('Send message failed:', error);
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      setInput(text);
     }
   };
 
