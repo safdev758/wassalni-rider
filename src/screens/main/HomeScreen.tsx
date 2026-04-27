@@ -17,21 +17,15 @@ import * as Location from 'expo-location';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useRide } from '../../context/RideContext';
+import { locationAPI } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
-const SAVED_LOCATIONS = [
-  { id: 'home', name: 'Home', address: 'Hydra, Algiers', distance: '2.4 km' },
-  { id: 'work', name: 'Office', address: 'Bab Ezzouar, Algiers', distance: '14.2 km' },
-];
-
-const RECENT_LOCATIONS = [
-  { id: '1', name: 'Place des Martyrs', address: 'Alger-Centre, Algiers' },
-  { id: '2', name: 'Houari Boumediene Airport', address: 'Terminal 2 Drop-off' },
-];
+type SavedLocation = { id: string; name: string; address: string; lat: number; lng: number };
+type RecentLocation = { id: string; name: string; address: string };
 
 export const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -41,6 +35,8 @@ export const HomeScreen: React.FC = () => {
     latitude: 36.7538,
     longitude: 3.0588,
   });
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
+  const [recentLocations, setRecentLocations] = useState<RecentLocation[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -58,9 +54,12 @@ export const HomeScreen: React.FC = () => {
         });
       } catch (error) {
         console.log('Error getting location:', error);
-        // Fallback to Algiers coordinates if location fails
       }
     })();
+
+    locationAPI.getSaved().then((res) => {
+      if (res?.locations) setSavedLocations(res.locations);
+    }).catch(() => {});
   }, []);
 
   const currentAddress = t('home.currentLocation');
@@ -172,23 +171,23 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>{t('home.suggested')}</Text>
             <View style={styles.suggestedGrid}>
-              {SAVED_LOCATIONS.map((location) => (
+              {savedLocations.map((loc) => (
                 <TouchableOpacity
-                  key={location.id}
+                  key={loc.id}
                   style={styles.suggestedCard}
-                  onPress={() => handleLocationPress(location.address)}
+                  onPress={() => handleLocationPress(loc.address)}
                   activeOpacity={0.9}
                 >
                   <View style={styles.suggestedIconContainer}>
                     <Ionicons
-                      name={location.id === 'home' ? 'home' : 'briefcase'}
+                      name={loc.name.toLowerCase().includes('home') ? 'home' : 'briefcase'}
                       size={18}
-                      color={location.id === 'home' ? colors.primary : colors.onSurface}
+                      color={loc.name.toLowerCase().includes('home') ? colors.primary : colors.onSurface}
                     />
                   </View>
                   <View>
-                    <Text style={styles.suggestedName}>{location.name}</Text>
-                    <Text style={styles.suggestedDistance}>{location.distance}</Text>
+                    <Text style={styles.suggestedName}>{loc.name}</Text>
+                    <Text style={styles.suggestedDistance}>{loc.address}</Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -197,19 +196,19 @@ export const HomeScreen: React.FC = () => {
 
           {/* Recent Places */}
           <View style={styles.sectionContainer}>
-            {RECENT_LOCATIONS.map((location) => (
+            {recentLocations.map((loc) => (
               <TouchableOpacity
-                key={location.id}
+                key={loc.id}
                 style={styles.recentItem}
-                onPress={() => handleLocationPress(location.address)}
+                onPress={() => handleLocationPress(loc.address)}
                 activeOpacity={0.9}
               >
                 <View style={styles.recentIconContainer}>
                   <Ionicons name="time" size={20} color={colors.onSurfaceVariant} />
                 </View>
                 <View style={styles.recentTextContainer}>
-                  <Text style={styles.recentName}>{location.name}</Text>
-                  <Text style={styles.recentAddress}>{location.address}</Text>
+                  <Text style={styles.recentName}>{loc.name}</Text>
+                  <Text style={styles.recentAddress}>{loc.address}</Text>
                 </View>
               </TouchableOpacity>
             ))}

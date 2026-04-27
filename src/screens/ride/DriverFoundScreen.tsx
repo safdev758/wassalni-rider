@@ -41,7 +41,7 @@ export const DriverFoundScreen: React.FC = () => {
           <Ionicons name="close" size={24} color={colors.onSurface} />
         </TouchableOpacity>
         <View style={styles.etaBadge}>
-          <Text style={styles.etaBadgeText}>{t('ride.estimatedTime')} 4 {t('ride.minAway')}</Text>
+          <Text style={styles.etaBadgeText}>{t('ride.estimatedTime')} {t('ride.minAway')}</Text>
         </View>
       </View>
 
@@ -68,7 +68,7 @@ export const DriverFoundScreen: React.FC = () => {
             <View style={styles.driverPhotoContainer}>
               <Ionicons name="person" size={28} color={colors.onSurface} />
               <View style={styles.ratingBadge}>
-                <Text style={styles.ratingText}>4.9</Text>
+                <Text style={styles.ratingText}>{driver.rating.toFixed(1)}</Text>
                 <Ionicons name="star" size={10} color={colors.primary} />
               </View>
             </View>
@@ -85,11 +85,11 @@ export const DriverFoundScreen: React.FC = () => {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => Alert.alert(t('ride.message'), t('common.loading'))}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Chat' as never)}>
             <Ionicons name="chatbubble" size={20} color={colors.primary} />
             <Text style={styles.secondaryButtonText}>{t('ride.message')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => Alert.alert(t('ride.callDriver'), t('common.loading'))}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Call' as never)}>
             <Ionicons name="call" size={20} color={colors.surface} />
             <Text style={styles.primaryButtonText}>{t('ride.callDriver')}</Text>
           </TouchableOpacity>

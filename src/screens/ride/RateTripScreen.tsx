@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,16 +12,11 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { formatCurrency } from '../../utils/format';
+import { ratingAPI } from '../../services/api';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
-const COMPLIMENTS = [
-  { id: 'clean', icon: 'cleaning-services', label: 'Spotless Car' },
-  { id: 'route', icon: 'route', label: 'Expert Navigation' },
-  { id: 'chat', icon: 'chat', label: 'Great Chat' },
-  { id: 'music', icon: 'musical-notes', label: 'Awesome Music' },
-];
-
+type Compliment = { id: string; icon: string; label: string };
 const TIP_OPTIONS_DZD = [50, 100, 200];
 
 export const RateTripScreen: React.FC = () => {
@@ -32,6 +27,26 @@ export const RateTripScreen: React.FC = () => {
   const [selectedTip, setSelectedTip] = useState<number>(100);
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
   const [note, setNote] = useState('');
+  const [compliments, setCompliments] = useState<Compliment[]>([]);
+
+  useEffect(() => {
+    ratingAPI.getCompliments().then((res) => {
+      if (res?.compliments) {
+        setCompliments(res.compliments.map((c: Record<string, string>) => ({
+          id: c.id,
+          icon: c.icon || 'star',
+          label: c.label,
+        })));
+      }
+    }).catch(() => {
+      setCompliments([
+        { id: 'clean_car', icon: 'sparkles', label: 'Spotless Car' },
+        { id: 'expert_nav', icon: 'navigate', label: 'Expert Navigation' },
+        { id: 'great_chat', icon: 'chatbubbles', label: 'Great Conversation' },
+        { id: 'smooth_ride', icon: 'speedometer', label: 'Smooth Ride' },
+      ]);
+    });
+  }, []);
 
   const handleStarPress = (star: number) => {
     setRating(star);
@@ -74,7 +89,7 @@ export const RateTripScreen: React.FC = () => {
           <View style={styles.driverAvatarContainer}>
             <Ionicons name="person" size={40} color={colors.onSurface} />
             <View style={styles.driverRatingBadge}>
-              <Text style={styles.driverRatingText}>4.98</Text>
+              <Text style={styles.driverRatingText}>{driver.rating.toFixed(2)}</Text>
               <Ionicons name="star" size={14} color={colors.primary} />
             </View>
           </View>
@@ -103,7 +118,7 @@ export const RateTripScreen: React.FC = () => {
         <View style={styles.complimentsSection}>
           <Text style={styles.sectionTitle}>{t('ride.rateYourTrip')}</Text>
           <View style={styles.complimentsGrid}>
-            {COMPLIMENTS.map(comp => (
+            {compliments.map(comp => (
               <TouchableOpacity
                 key={comp.id}
                 style={[
