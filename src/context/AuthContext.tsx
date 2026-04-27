@@ -158,8 +158,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...prev,
       user: prev.user ? {
         ...prev.user,
-        name: profile.name || prev.user.name,
-        email: profile.email || prev.user.email,
+        name: profile.name ?? prev.user.name,
+        email: profile.email ?? prev.user.email,
       } : null,
     }));
   };

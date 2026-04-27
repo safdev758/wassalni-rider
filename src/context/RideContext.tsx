@@ -203,6 +203,7 @@ export const RideProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         selected: idx === 0,
       }));
 
+      setRideId(result.ride_id || null);
       setOptions(rideOptions);
       setSelectedOption(rideOptions[0] || null);
       if (rideOptions[0]) {
@@ -215,7 +216,7 @@ export const RideProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    if (state === 'searching' && pickupCoords && dropoffCoords) {
+    if (state === 'searching' && pickupCoords && dropoffCoords && !rideId) {
       fetchEstimate();
     }
   }, [state, pickupCoords, dropoffCoords]);
@@ -233,23 +234,29 @@ export const RideProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const confirmRide = async () => {
-    if (!selectedOption || !pickupCoords || !dropoffCoords) return;
+    if (!selectedOption || !rideId) return;
 
     try {
-      const result = await rideAPI.create({
-        pickup_address: pickup,
-        pickup_lat: pickupCoords.latitude,
-        pickup_lng: pickupCoords.longitude,
-        dropoff_address: dropoff,
-        dropoff_lat: dropoffCoords.latitude,
-        dropoff_lng: dropoffCoords.longitude,
-        vehicle_type: selectedOption.id,
-        rider_price: riderPrice,
-        payment_method: 'cash',
+      const result = await rideAPI.confirm(rideId, {
+        option_id: selectedOption.id,
+        payment_method_id: 'cash',
+        scheduled_for: null,
       });
 
-      setRideId(result.ride_id);
-      setState('searching');
+      if (result.driver) {
+        const d = result.driver;
+        setDriver({
+          id: d.id,
+          name: d.name,
+          rating: d.rating,
+          vehicle: d.vehicle,
+          plate: d.plate,
+          photoUrl: d.photo_url || '',
+        });
+        setState('driver_found');
+      } else {
+        setState('searching');
+      }
     } catch (error) {
       console.error('Create ride failed:', error);
     }

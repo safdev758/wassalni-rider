@@ -99,6 +99,12 @@ export const rideAPI = {
 
   getOffers: (rideId: string) => get(`/rides/${rideId}/offers`),
 
+  confirm: (rideId: string, data: {
+    option_id: string;
+    payment_method_id: string;
+    scheduled_for?: string | null;
+  }) => post(`/rides/${rideId}/confirm`, data),
+
   acceptCounterOffer: (rideId: string, offerId: string) =>
     post(`/rides/${rideId}/offers/${offerId}/accept`),
 
@@ -164,6 +170,7 @@ let wsIntentionalClose = false;
 
 export const connectWebSocket = () => {
   if (wsConnection?.readyState === WebSocket.OPEN || wsConnection?.readyState === WebSocket.CONNECTING) return;
+  if (!accessToken) return;
   wsIntentionalClose = false;
 
   const url = `${WS_BASE_URL}/ws?token=${accessToken}`;
