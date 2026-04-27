@@ -118,12 +118,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await storeToken(response.access_token);
 
     const user = response.user;
+    const displayName = pendingName || user.name;
     setAuth({
       isGuest: false,
       isAuthenticated: true,
       user: {
         id: user.id,
-        name: user.name,
+        name: displayName,
         phone: user.phone,
         email: user.email || '',
         totalRides: user.total_rides || 0,

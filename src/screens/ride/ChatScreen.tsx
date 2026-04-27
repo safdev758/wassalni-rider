@@ -43,7 +43,7 @@ export const ChatScreen: React.FC = () => {
     const handler = (msg: WSMessage) => {
       if (msg.type === 'chat_message') {
         const payload = msg.payload as Record<string, unknown>;
-        if (payload.ride_id === rideId) {
+        if (payload.ride_id === rideId && payload.sender_type !== 'rider') {
           setMessages(prev => [...prev, {
             id: payload.message_id as string,
             senderType: payload.sender_type as string,
