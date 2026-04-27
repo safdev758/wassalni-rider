@@ -214,14 +214,16 @@ export const RideProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  useEffect(() => {
+    if (state === 'searching' && pickupCoords && dropoffCoords) {
+      fetchEstimate();
+    }
+  }, [state, pickupCoords, dropoffCoords]);
+
   const startSearch = (p: string, d: string) => {
     setPickup(p);
     setDropoff(d);
     setState('searching');
-
-    if (pickupCoords && dropoffCoords) {
-      fetchEstimate();
-    }
   };
 
   const selectOption = (option: RideOption) => {
@@ -288,7 +290,7 @@ export const RideProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const submitRating = async (stars: number, tip: number, compliments: string[]) => {
     if (rideId) {
       try {
-        await rideAPI.rate(rideId, { stars, tip_amount: tip, compliments });
+        await rideAPI.rate(rideId, { rating: stars, tip_amount: tip, compliments });
       } catch (error) {
         console.error('Rate ride failed:', error);
       }

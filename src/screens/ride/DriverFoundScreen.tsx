@@ -41,7 +41,7 @@ export const DriverFoundScreen: React.FC = () => {
           <Ionicons name="close" size={24} color={colors.onSurface} />
         </TouchableOpacity>
         <View style={styles.etaBadge}>
-          <Text style={styles.etaBadgeText}>{t('ride.estimatedTime')} {selectedOption?.eta || '5 min'} {t('ride.minAway')}</Text>
+          <Text style={styles.etaBadgeText}>{t('ride.estimatedTime')} {selectedOption?.eta || '5 min'}</Text>
         </View>
       </View>
 

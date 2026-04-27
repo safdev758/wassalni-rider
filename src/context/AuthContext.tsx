@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { authAPI, userAPI, setAccessToken, connectWebSocket, disconnectWebSocket } from '../services/api';
 
 const TOKEN_KEY = 'rider_access_token';
+const DEVICE_ID_KEY = 'rider_device_id';
 
 const storeToken = async (token: string | null) => {
   if (Platform.OS === 'web') return;
@@ -99,8 +100,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await authAPI.sendOTP(phone);
   };
 
+  const getDeviceId = async (): Promise<string> => {
+    if (Platform.OS === 'web') return 'web-device';
+    const stored = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    if (stored) return stored;
+    const id = `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    await SecureStore.setItemAsync(DEVICE_ID_KEY, id);
+    return id;
+  };
+
   const verifyOTP = async (phone: string, code: string) => {
-    const response = await authAPI.verifyOTP(phone, code);
+    const deviceId = await getDeviceId();
+    const deviceType = Platform.OS;
+    const response = await authAPI.verifyOTP(phone, code, deviceId, deviceType);
     setAccessToken(response.access_token);
     await storeToken(response.access_token);
 

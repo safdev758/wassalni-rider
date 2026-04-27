@@ -57,11 +57,11 @@ const del = (path: string, body?: object) =>
 
 // --- Auth ---
 export const authAPI = {
-  sendOTP: (phone: string, userType = 'rider') =>
-    post('/auth/phone/send', { phone, user_type: userType }),
+  sendOTP: (phone: string) =>
+    post('/auth/phone/send', { phone, country_code: 'DZ' }),
 
-  verifyOTP: (phone: string, code: string, userType = 'rider') =>
-    post('/auth/phone/verify', { phone, code, user_type: userType }),
+  verifyOTP: (phone: string, code: string, deviceId: string, deviceType: string) =>
+    post('/auth/phone/verify', { phone, code, device_id: deviceId, device_type: deviceType }),
 };
 
 // --- User Profile ---
@@ -103,14 +103,14 @@ export const rideAPI = {
     post(`/rides/${rideId}/offers/${offerId}/accept`),
 
   rate: (rideId: string, data: {
-    stars: number;
+    rating: number;
     compliments?: string[];
     tip_amount?: number;
     note?: string;
   }) => post(`/rides/${rideId}/rate`, data),
 
-  sendMessage: (rideId: string, content: string) =>
-    post(`/rides/${rideId}/messages`, { content }),
+  sendMessage: (rideId: string, message: string) =>
+    post(`/rides/${rideId}/messages`, { message }),
 
   getMessages: (rideId: string) => get(`/rides/${rideId}/messages`),
 };
