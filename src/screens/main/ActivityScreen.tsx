@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
-  Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,42 +16,30 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { formatCurrency } from '../../utils/format';
-
-const MOCK_ACTIVITIES = [
-  {
-    id: '1',
-    date: 'Oct 24, 2023 • 9:42 PM',
-    destination: 'Place des Martyrs',
-    address: 'Alger-Centre, Algiers',
-    priceDzd: 850,
-    vehicle: 'Wasselni Plus',
-    carType: 'Renault Symbol',
-    status: 'completed',
-  },
-  {
-    id: '2',
-    date: 'Oct 22, 2023 • 2:15 PM',
-    destination: 'Houari Boumediene Airport',
-    address: 'Terminal 2 Arrivals',
-    priceDzd: 1400,
-    vehicle: 'Wasselni XL',
-    carType: 'Dacia Logan MCV',
-    status: 'completed',
-  },
-  {
-    id: '3',
-    date: 'Oct 18, 2023 • 7:30 AM',
-    destination: 'Bab Ezzouar Business District',
-    address: 'Cite des Bananiers',
-    priceDzd: 0,
-    vehicle: 'Wasselni Plus',
-    carType: 'Hyundai Accent',
-    status: 'canceled',
-  },
-];
+import { rideAPI } from '../../services/api';
 
 export const ActivityScreen: React.FC = () => {
   const { t } = useTranslation();
+  const [rides, setRides] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError(null);
+    try {
+      const res = await rideAPI.history(20, 0);
+      setRides(res?.rides ?? []);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -58,69 +47,67 @@ export const ActivityScreen: React.FC = () => {
         <Text style={styles.headerTitle}>{t('activity.title')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {MOCK_ACTIVITIES.map((activity) => (
-          <View key={activity.id} style={[styles.activityCard, activity.status === 'canceled' && styles.activityCardCanceled]}>
-            <View style={styles.activityTop}>
-              <View>
-                <Text style={styles.activityDate}>{activity.date}</Text>
-                <Text style={styles.activityDestination}>{activity.destination}</Text>
-                <Text style={styles.activityAddress}>{activity.address}</Text>
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 48 }} color={colors.primary} size="large" />
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity onPress={() => load()} style={styles.retryButton}>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={rides}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} colors={[colors.primary]} />}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="car-outline" size={64} color={colors.onSurfaceVariant} />
+              <Text style={styles.emptyText}>{t('activity.noTripsYet')}</Text>
+            </View>
+          }
+          renderItem={({ item: activity }) => (
+            <View style={[styles.activityCard, activity.status === 'cancelled' && styles.activityCardCanceled]}>
+              <View style={styles.activityTop}>
+                <View style={{ flex: 1, marginRight: spacing.md }}>
+                  <Text style={styles.activityDate}>{new Date(activity.created_at).toLocaleString()}</Text>
+                  <Text style={styles.activityDestination} numberOfLines={1}>{activity.dropoff_address}</Text>
+                  <Text style={styles.activityAddress} numberOfLines={1}>{activity.pickup_address}</Text>
+                </View>
+                <View style={styles.activityPrice}>
+                  <Text style={styles.priceText}>{formatCurrency(activity.final_price ?? activity.rider_price ?? 0)}</Text>
+                  <View style={[styles.statusBadge, activity.status === 'completed' ? styles.statusCompleted : styles.statusCanceled]}>
+                    <Ionicons
+                      name={activity.status === 'completed' ? 'checkmark' : 'close'}
+                      size={12}
+                      color={activity.status === 'completed' ? colors.primary : colors.error}
+                    />
+                    <Text style={[styles.statusText, activity.status === 'completed' ? styles.statusTextCompleted : styles.statusTextCanceled]}>
+                      {activity.status === 'completed' ? t('ride.tripCompleted') : t('common.cancel')}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.activityPrice}>
-                <Text style={styles.priceText}>{formatCurrency(activity.priceDzd)}</Text>
-                <View style={[
-                  styles.statusBadge,
-                  activity.status === 'completed' ? styles.statusCompleted : styles.statusCanceled,
-                ]}>
-                  <Ionicons
-                    name={activity.status === 'completed' ? 'checkmark' : 'close'}
-                    size={12}
-                    color={activity.status === 'completed' ? colors.primary : colors.error}
-                  />
-                  <Text style={[
-                    styles.statusText,
-                    activity.status === 'completed' ? styles.statusTextCompleted : styles.statusTextCanceled,
-                  ]}>
-                    {activity.status === 'completed' ? t('ride.tripCompleted') : t('common.cancel')}
+              <View style={styles.vehicleInfo}>
+                <View style={styles.vehicleIconContainer}>
+                  <Ionicons name="car" size={20} color={activity.status === 'completed' ? colors.onSurface : colors.onSurfaceVariant} />
+                </View>
+                <View style={styles.vehicleTextContainer}>
+                  <Text style={[styles.vehicleName, activity.status === 'cancelled' && styles.vehicleNameCanceled]}>
+                    {activity.vehicle_type ?? '—'}
+                  </Text>
+                  <Text style={[styles.carType, activity.status === 'cancelled' && styles.carTypeCanceled]}>
+                    {activity.driver_name ?? '—'}
                   </Text>
                 </View>
               </View>
             </View>
-
-            <View style={styles.vehicleInfo}>
-              <View style={styles.vehicleIconContainer}>
-                <Ionicons
-                  name="car"
-                  size={20}
-                  color={activity.status === 'completed' ? colors.onSurface : colors.onSurfaceVariant}
-                />
-              </View>
-              <View style={styles.vehicleTextContainer}>
-                <Text style={[
-                  styles.vehicleName,
-                  activity.status === 'canceled' && styles.vehicleNameCanceled,
-                ]}>
-                  {activity.vehicle}
-                </Text>
-                <Text style={[
-                  styles.carType,
-                  activity.status === 'canceled' && styles.carTypeCanceled,
-                ]}>
-                  {activity.carType}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => Alert.alert(t('common.loading'), t('activity.noTripsYet'))}>
-                <Text style={styles.receiptText}>{t('common.more')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        <TouchableOpacity style={styles.loadMoreButton} onPress={() => Alert.alert(t('activity.title'), t('common.loading'))}>
-          <Text style={styles.loadMoreButtonText}>{t('common.seeAll')}</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -269,5 +256,31 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.bodySmall,
     fontWeight: '500' as any,
     color: colors.onSurfaceVariant,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: spacing.xxl * 2,
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: spacing.borderRadius.xl,
+  },
+  retryText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodySmall,
+    fontWeight: '600' as any,
+    color: colors.surface,
   },
 });

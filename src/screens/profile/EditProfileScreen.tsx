@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,18 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useAuth } from '../../context/AuthContext';
+import { ProfileAvatar } from '../../components/profile/ProfileAvatar';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -25,15 +28,59 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 export const EditProfileScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { user } = useAuth();
+  const { user, updateProfile, uploadAvatar } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(user?.phone || '');
+  const [phone] = useState(user?.phone || '');
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    navigation.goBack();
-  };
+  const handleChangePhoto = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(t('common.error'), t('profile.photoPermissionDenied'));
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType || 'image/jpeg';
+
+    setUploadingPhoto(true);
+    try {
+      await uploadAvatar(asset.base64, mimeType);
+      Alert.alert(t('common.ok'), t('profile.photoUpdated'));
+    } catch {
+      Alert.alert(t('common.error'), t('profile.photoUploadFailed'));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }, [t, uploadAvatar]);
+
+  const handleSave = useCallback(async () => {
+    if (!name.trim()) {
+      Alert.alert(t('common.error'), t('profile.nameRequired'));
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateProfile({ name: name.trim(), email: email.trim() });
+      navigation.goBack();
+    } catch {
+      Alert.alert(t('common.error'), t('profile.saveFailed'));
+    } finally {
+      setSaving(false);
+    }
+  }, [name, email, navigation, t, updateProfile]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -41,59 +88,59 @@ export const EditProfileScreen: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.onSurface} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveButton}>Save</Text>
+        <Text style={styles.headerTitle}>{t('profile.editTitle')}</Text>
+        <TouchableOpacity onPress={handleSave} disabled={saving}>
+          <Text style={[styles.saveButton, saving && { opacity: 0.4 }]}>{t('common.save')}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Avatar Section */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={40} color={colors.onSurfaceVariant} />
-          </View>
-          <TouchableOpacity style={styles.changeAvatarButton} onPress={() => Alert.alert('Change Photo', 'Photo upload feature coming soon.')}>
-            <Text style={styles.changeAvatarText}>Change Photo</Text>
+          <ProfileAvatar uri={user?.avatar} cacheBust={user?.avatarVersion} size={100} />
+          <TouchableOpacity
+            style={styles.changeAvatarButton}
+            onPress={handleChangePhoto}
+            disabled={uploadingPhoto}
+          >
+            {uploadingPhoto ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Text style={styles.changeAvatarText}>{t('profile.changePhoto')}</Text>
+            )}
           </TouchableOpacity>
         </View>
 
-        {/* Name Input */}
         <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>Full Name</Text>
+          <Text style={styles.inputLabel}>{t('profile.fullName')}</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Enter your full name"
+            placeholder={t('profile.fullNamePlaceholder')}
             placeholderTextColor={colors.onSurfaceVariant}
           />
         </View>
 
-        {/* Email Input */}
         <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>Email</Text>
+          <Text style={styles.inputLabel}>{t('profile.email')}</Text>
           <TextInput
             style={styles.input}
             value={email}
             onChangeText={setEmail}
-            placeholder="Enter your email"
+            placeholder={t('profile.emailPlaceholder')}
             placeholderTextColor={colors.onSurfaceVariant}
             keyboardType="email-address"
             autoCapitalize="none"
           />
         </View>
 
-        {/* Phone Input */}
         <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>Phone Number</Text>
+          <Text style={styles.inputLabel}>{t('profile.phone')}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.inputDisabled]}
             value={phone}
-            onChangeText={setPhone}
-            placeholder="Enter your phone number"
+            editable={false}
             placeholderTextColor={colors.onSurfaceVariant}
-            keyboardType="phone-pad"
           />
         </View>
       </ScrollView>
@@ -133,17 +180,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
   changeAvatarButton: {
+    marginTop: spacing.md,
     padding: spacing.sm,
+    minHeight: 32,
+    justifyContent: 'center',
   },
   changeAvatarText: {
     fontFamily: typography.fontFamily.body,
@@ -170,5 +211,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: 16,
     color: colors.onSurface,
+  },
+  inputDisabled: {
+    opacity: 0.7,
   },
 });

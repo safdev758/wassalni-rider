@@ -10,6 +10,7 @@ import { ActivityScreen } from '../screens/main/ActivityScreen';
 import { WalletScreen } from '../screens/main/WalletScreen';
 import { ProfileGuestScreen } from '../screens/main/ProfileGuestScreen';
 import { ProfileScreen } from '../screens/main/ProfileScreen';
+import { AuthRequiredTab } from '../components/AuthRequiredTab';
 import { useAuth } from '../context/AuthContext';
 
 import { colors } from '../theme/colors';
@@ -85,7 +86,11 @@ export const MainTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Activity"
-        component={ActivityScreen}
+        children={() => (
+          <AuthRequiredTab titleKey="activity.title">
+            <ActivityScreen />
+          </AuthRequiredTab>
+        )}
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={focused ? styles.activeTab : styles.inactiveTab}>
@@ -104,7 +109,11 @@ export const MainTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Wallet"
-        component={WalletScreen}
+        children={() => (
+          <AuthRequiredTab titleKey="wallet.title">
+            <WalletScreen />
+          </AuthRequiredTab>
+        )}
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={focused ? styles.activeTab : styles.inactiveTab}>

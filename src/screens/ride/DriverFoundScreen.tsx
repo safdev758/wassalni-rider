@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useRide } from '../../context/RideContext';
+import { useRideCallActions } from '../../hooks/useRideCallActions';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -17,7 +18,13 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 export const DriverFoundScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { driver, state, cancelRide, selectedOption } = useRide();
+  const { driver, state, cancelRide, selectedOption, rideId } = useRide();
+  const { startAudioCall, startVideoCall } = useRideCallActions({
+    rideId,
+    peerType: 'driver',
+    peerId: driver?.id,
+    peerName: driver?.name ?? t('ride.driver'),
+  });
 
   useEffect(() => {
     if (state === 'tracking') {
@@ -29,7 +36,6 @@ export const DriverFoundScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Top overlay */}
       <View style={styles.topOverlay}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -37,6 +43,8 @@ export const DriverFoundScreen: React.FC = () => {
             cancelRide();
             navigation.navigate('Main');
           }}
+          accessibilityLabel={t('ride.cancelRide')}
+          accessibilityRole="button"
         >
           <Ionicons name="close" size={24} color={colors.onSurface} />
         </TouchableOpacity>
@@ -45,7 +53,6 @@ export const DriverFoundScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Map area (placeholder) */}
       <View style={styles.mapArea}>
         <View style={styles.driverPin}>
           <View style={styles.driverAvatar}>
@@ -57,12 +64,10 @@ export const DriverFoundScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Bottom sheet */}
       <View style={styles.bottomSheet}>
         <View style={styles.dragHandle} />
         <Text style={styles.bottomTitle}>{t('ride.yourDriverIsArriving')}</Text>
 
-        {/* Driver details */}
         <View style={styles.driverDetails}>
           <View style={styles.driverLeft}>
             <View style={styles.driverPhotoContainer}>
@@ -83,19 +88,25 @@ export const DriverFoundScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Chat')}>
             <Ionicons name="chatbubble" size={20} color={colors.primary} />
             <Text style={styles.secondaryButtonText}>{t('ride.message')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => Alert.alert(t('ride.callDriver'), 'WebRTC call coming soon')}>
-            <Ionicons name="call" size={20} color={colors.surface} />
-            <Text style={styles.primaryButtonText}>{t('ride.callDriver')}</Text>
+          <TouchableOpacity style={styles.secondaryButton} onPress={startAudioCall}>
+            <Ionicons name="call" size={20} color={colors.primary} />
+            <Text style={styles.secondaryButtonText}>{t('ride.audioCall')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={startVideoCall}>
+            <Ionicons name="videocam" size={20} color={colors.primary} />
+            <Text style={styles.secondaryButtonText}>{t('ride.videoCall')}</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.shareButton} onPress={() => Alert.alert(t('ride.shareTripStatus'), t('common.loading'))}>
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={() => Alert.alert(t('ride.shareTripStatus'), t('common.loading'))}
+        >
           <Text style={styles.shareButtonText}>{t('ride.shareTripStatus')}</Text>
         </TouchableOpacity>
       </View>
@@ -104,10 +115,7 @@ export const DriverFoundScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
+  container: { flex: 1, backgroundColor: colors.surface },
   topOverlay: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -116,208 +124,108 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   closeButton: {
-    width: 48,
-    height: 48,
-    borderRadius: spacing.borderRadius.full,
+    width: 48, height: 48, borderRadius: spacing.borderRadius.full,
     backgroundColor: colors.surfaceContainerHigh + 'CC',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
   etaBadge: {
     backgroundColor: colors.surfaceContainerHigh + 'CC',
     borderRadius: spacing.borderRadius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   etaBadgeText: {
     fontFamily: typography.fontFamily.headline,
     fontSize: typography.fontSize.bodySmall,
-    fontWeight: '600' as any,
+    fontWeight: '600' as never,
     color: colors.primary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  mapArea: {
-    flex: 1,
-    backgroundColor: colors.surfaceContainerLowest,
-  },
+  mapArea: { flex: 1, backgroundColor: colors.surfaceContainerLowest },
   driverPin: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
+    position: 'absolute', top: '50%', left: '50%',
     transform: [{ translateX: -40 }, { translateY: -40 }],
     alignItems: 'center',
   },
   driverAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 64, height: 64, borderRadius: 32,
     backgroundColor: colors.surfaceContainerHigh,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
   },
   arrivingBadge: {
     backgroundColor: colors.surfaceContainerHigh + 'E6',
     borderRadius: spacing.borderRadius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 4, marginTop: spacing.sm,
   },
   arrivingBadgeText: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: 10,
-    fontWeight: '700' as any,
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontFamily: typography.fontFamily.headline,
+    fontSize: 10, fontWeight: '700' as never, color: colors.onSurface,
   },
   bottomSheet: {
     backgroundColor: colors.surfaceContainerLow,
-    borderTopLeftRadius: spacing.borderRadius.xxl,
-    borderTopRightRadius: spacing.borderRadius.xxl,
+    borderTopLeftRadius: spacing.borderRadius.xl,
+    borderTopRightRadius: spacing.borderRadius.xl,
     padding: spacing.lg,
-    paddingBottom: spacing.xl,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: -20 },
-    shadowOpacity: 0.5,
-    shadowRadius: 40,
-    elevation: 16,
   },
   dragHandle: {
-    width: 48,
-    height: 6,
-    backgroundColor: colors.outlineVariant + '4D',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
+    width: 40, height: 4, backgroundColor: colors.onSurfaceVariant,
+    borderRadius: 2, alignSelf: 'center', marginBottom: spacing.md,
   },
   bottomTitle: {
     fontFamily: typography.fontFamily.headline,
-    fontSize: typography.fontSize.bodyLarge,
-    fontWeight: '700' as any,
+    fontSize: typography.fontSize.titleMedium,
+    fontWeight: '700' as never,
     color: colors.onSurface,
     marginBottom: spacing.lg,
   },
   driverDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: spacing.lg,
   },
-  driverLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  driverPhotoContainer: {
-    position: 'relative',
-  },
+  driverLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  driverPhotoContainer: { position: 'relative' },
   ratingBadge: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    backgroundColor: colors.surfaceContainerHighest,
-    borderRadius: spacing.borderRadius.full,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    borderWidth: 2,
-    borderColor: colors.surface,
+    position: 'absolute', bottom: -4, right: -4,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 4,
   },
-  ratingText: {
-    fontFamily: typography.fontFamily.label,
-    fontSize: 10,
-    fontWeight: '700' as any,
-    color: colors.onSurface,
-  },
+  ratingText: { fontSize: 10, fontWeight: '700' as never },
   driverName: {
     fontFamily: typography.fontFamily.headline,
     fontSize: typography.fontSize.bodyLarge,
-    fontWeight: '600' as any,
-    color: colors.onSurface,
+    fontWeight: '600' as never,
   },
   driverVehicle: {
     fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodyMedium,
+    fontSize: typography.fontSize.bodySmall,
     color: colors.onSurfaceVariant,
-    marginTop: 2,
   },
-  plateContainer: {
-    backgroundColor: colors.surfaceContainerHighest,
-    borderRadius: spacing.borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    minWidth: 100,
-  },
+  plateContainer: { alignItems: 'flex-end' },
   plateText: {
     fontFamily: typography.fontFamily.headline,
-    fontSize: typography.fontSize.bodyLarge,
-    fontWeight: '800' as any,
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    fontSize: typography.fontSize.titleMedium,
+    fontWeight: '800' as never,
   },
-  plateLabel: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: 10,
-    color: colors.onSurfaceVariant,
-    textTransform: 'uppercase',
-    marginTop: 2,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
+  plateLabel: { fontSize: 10, color: colors.onSurfaceVariant },
+  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   secondaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: spacing.borderRadius.lg,
+    backgroundColor: colors.surfaceContainerHigh,
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceContainerHighest,
-    borderRadius: spacing.borderRadius.xl,
-    paddingVertical: spacing.md,
   },
   secondaryButtonText: {
     fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodyMedium,
-    fontWeight: '500' as any,
-    color: colors.onSurface,
+    fontSize: typography.fontSize.bodySmall,
+    color: colors.primary,
+    fontWeight: '600' as never,
   },
-  primaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: spacing.borderRadius.xl,
-    paddingVertical: spacing.md,
-    shadowColor: colors.onPrimaryContainer,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  primaryButtonText: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodyMedium,
-    fontWeight: '500' as any,
-    color: colors.surface,
-  },
-  shareButton: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
+  shareButton: { alignItems: 'center', paddingVertical: spacing.sm },
   shareButtonText: {
     fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodyMedium,
-    color: colors.onSurfaceVariant,
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
 });

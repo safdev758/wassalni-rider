@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -15,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useAuth } from '../../context/AuthContext';
+import { ProfileAvatar } from '../../components/profile/ProfileAvatar';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -31,8 +33,14 @@ interface MenuItem {
 export const ProfileScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUserProfile } = useAuth();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshUserProfile().catch(() => {});
+    }, [refreshUserProfile]),
+  );
 
   const menuItems: MenuItem[] = [
     { icon: 'person-outline', title: t('profile.editProfile'), onPress: () => navigation.navigate('EditProfile') },
@@ -67,11 +75,7 @@ export const ProfileScreen: React.FC = () => {
           onPress={() => navigation.navigate('EditProfile')}
           activeOpacity={0.9}
         >
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={32} color={colors.onSurface} />
-            </View>
-          </View>
+          <ProfileAvatar uri={user.avatar} cacheBust={user.avatarVersion} size={72} />
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{user.name}</Text>
             <Text style={styles.phone}>{user.phone}</Text>
@@ -192,16 +196,6 @@ const styles = StyleSheet.create({
     borderRadius: spacing.borderRadius.xxl,
     padding: spacing.lg,
     marginBottom: spacing.xl,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 3,
-    borderColor: colors.surface,
   },
   profileInfo: {
     flex: 1,

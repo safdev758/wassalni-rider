@@ -2,23 +2,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authAPI, userAPI, setAccessToken, connectWebSocket, disconnectWebSocket } from '../services/api';
+import { onUnauthorized } from '../services/authEvents';
+import { registerPushTokenIfPossible, resetPushRegistration } from '../services/pushNotifications';
 
-const TOKEN_KEY = 'rider_access_token';
 const DEVICE_ID_KEY = 'rider_device_id';
-
-const storeToken = async (token: string | null) => {
-  if (Platform.OS === 'web') return;
-  if (token) {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-  } else {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-  }
-};
-
-const loadToken = async (): Promise<string | null> => {
-  if (Platform.OS === 'web') return null;
-  return SecureStore.getItemAsync(TOKEN_KEY);
-};
 
 type User = {
   id: string;
@@ -27,6 +14,7 @@ type User = {
   email: string;
   totalRides: number;
   avatar?: string;
+  avatarVersion?: number;
 };
 
 type AuthState = {
@@ -40,9 +28,11 @@ type AuthContextType = AuthState & {
   sendOTP: (phone: string) => Promise<void>;
   verifyOTP: (phone: string, code: string) => Promise<void>;
   login: (phone: string) => Promise<void>;
-  signup: (name: string, phone: string) => Promise<void>;
+  signup: (name: string, phone: string, gender?: 'female' | 'male') => Promise<void>;
   logout: () => void;
   updateProfile: (data: { name?: string; email?: string }) => Promise<void>;
+  uploadAvatar: (imageBase64: string, mimeType: string) => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -56,7 +46,28 @@ const AuthContext = createContext<AuthContextType>({
   signup: async () => {},
   logout: () => {},
   updateProfile: async () => {},
+  uploadAvatar: async () => {},
+  refreshUserProfile: async () => {},
 });
+
+function mapProfile(profile: {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  avatar_url?: string;
+  total_rides?: number;
+}): User {
+  return {
+    id: profile.id,
+    name: profile.name,
+    phone: profile.phone,
+    email: profile.email || '',
+    totalRides: profile.total_rides ?? 0,
+    avatar: profile.avatar_url,
+    avatarVersion: profile.avatar_url ? Date.now() : undefined,
+  };
+}
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [auth, setAuth] = useState<AuthState>({
@@ -66,9 +77,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading: true,
   });
   const [pendingName, setPendingName] = useState<string | null>(null);
+  const [pendingGender, setPendingGender] = useState<'female' | 'male' | null>(null);
 
   useEffect(() => {
-    loadToken().then(async (token) => {
+    const handleUnauthorized = () => {
+      disconnectWebSocket();
+      resetPushRegistration();
+      setAuth({ isGuest: true, isAuthenticated: false, user: null, isLoading: false });
+    };
+    return onUnauthorized(handleUnauthorized);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS === 'web') {
+        setAuth(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+      const token = await SecureStore.getItemAsync('rider_access_token');
       if (token) {
         setAccessToken(token);
         try {
@@ -76,17 +102,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setAuth({
             isGuest: false,
             isAuthenticated: true,
-            user: {
-              id: profile.id,
-              name: profile.name,
-              phone: profile.phone,
-              email: profile.email,
-              totalRides: profile.total_rides,
-              avatar: profile.avatar_url,
-            },
+            user: mapProfile(profile),
             isLoading: false,
           });
           connectWebSocket();
+          registerPushTokenIfPossible().catch(() => {});
         } catch {
           setAccessToken(null);
           setAuth({ isGuest: true, isAuthenticated: false, user: null, isLoading: false });
@@ -94,11 +114,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         setAuth(prev => ({ ...prev, isLoading: false }));
       }
-    });
+    })();
   }, []);
 
   const sendOTP = async (phone: string) => {
-    await authAPI.sendOTP(phone);
+    // Ensure phone number has +213 prefix for Algerian numbers
+    const formattedPhone = phone.startsWith('+') ? phone : `+213${phone.replace(/^213/, '')}`;
+    await authAPI.sendOTP(formattedPhone);
   };
 
   const getDeviceId = async (): Promise<string> => {
@@ -111,11 +133,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const verifyOTP = async (phone: string, code: string) => {
+    // Ensure phone number has +213 prefix for Algerian numbers
+    const formattedPhone = phone.startsWith('+') ? phone : `+213${phone.replace(/^213/, '')}`;
     const deviceId = await getDeviceId();
     const deviceType = Platform.OS;
-    const response = await authAPI.verifyOTP(phone, code, deviceId, deviceType);
+    const response = await authAPI.verifyOTP(formattedPhone, code, deviceId, deviceType);
     setAccessToken(response.access_token);
-    await storeToken(response.access_token);
 
     const user = response.user;
     const displayName = pendingName || user.name;
@@ -132,10 +155,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isLoading: false,
     });
     connectWebSocket();
+    registerPushTokenIfPossible().catch(() => {});
 
-    if (pendingName) {
-      userAPI.updateProfile({ name: pendingName }).catch(() => {});
+    if (pendingName || pendingGender) {
+      userAPI.updateProfile({
+        ...(pendingName ? { name: pendingName } : {}),
+        ...(pendingGender ? { gender: pendingGender } : {}),
+      }).catch(() => {});
       setPendingName(null);
+      setPendingGender(null);
     }
   };
 
@@ -143,14 +171,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await sendOTP(phone);
   };
 
-  const signup = async (name: string, phone: string) => {
+  const signup = async (name: string, phone: string, gender?: 'female' | 'male') => {
     setPendingName(name);
+    setPendingGender(gender ?? null);
     await sendOTP(phone);
   };
 
   const logout = () => {
     setAccessToken(null);
-    storeToken(null).catch(() => {});
+    resetPushRegistration();
     disconnectWebSocket();
     setAuth({
       isGuest: true,
@@ -160,20 +189,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
+  const refreshUserProfile = async () => {
+    try {
+      const profile = await userAPI.getProfile();
+      setAuth((prev) => {
+        if (!prev.isAuthenticated || !prev.user) return prev;
+        const next = mapProfile(profile);
+        const avatarChanged = next.avatar !== prev.user.avatar;
+        return {
+          ...prev,
+          user: {
+            ...next,
+            avatarVersion: avatarChanged ? Date.now() : prev.user.avatarVersion,
+          },
+        };
+      });
+    } catch {
+      // ignore refresh errors on profile tab
+    }
+  };
+
   const updateProfile = async (data: { name?: string; email?: string }) => {
     const profile = await userAPI.updateProfile(data);
-    setAuth(prev => ({
+    setAuth((prev) => ({
       ...prev,
-      user: prev.user ? {
-        ...prev.user,
-        name: profile.name ?? prev.user.name,
-        email: profile.email ?? prev.user.email,
-      } : null,
+      user: prev.user ? mapProfile({ ...profile, phone: profile.phone || prev.user.phone }) : null,
+    }));
+  };
+
+  const uploadAvatar = async (imageBase64: string, mimeType: string) => {
+    const profile = await userAPI.uploadAvatar(imageBase64, mimeType);
+    const mapped = mapProfile({ ...profile, phone: profile.phone });
+    setAuth((prev) => ({
+      ...prev,
+      user: prev.user
+        ? { ...mapped, phone: profile.phone || prev.user.phone, avatarVersion: Date.now() }
+        : null,
     }));
   };
 
   return (
-    <AuthContext.Provider value={{ ...auth, sendOTP, verifyOTP, login, signup, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{
+        ...auth,
+        sendOTP,
+        verifyOTP,
+        login,
+        signup,
+        logout,
+        updateProfile,
+        uploadAvatar,
+        refreshUserProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,58 +1,104 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
+  Modal,
+  ActivityIndicator,
   Alert,
+  Linking,
+  RefreshControl,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
-import { formatCurrency, formatSignedCurrency } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
+import { walletAPI } from '../../services/api';
 
-const MOCK_BALANCE_DZD = 4250;
-const MOCK_PAYMENT_METHODS = [
-  { id: '1', type: 'card', nameKey: 'wallet.defaultCard', name: 'CIB Card', last4: '4921', isDefault: true },
-  { id: '2', type: 'wallet', nameKey: 'rideOptions.cashPayment', name: 'Cash', isDefault: false },
-];
-const MOCK_TRANSACTIONS: Array<{
+type Transaction = {
   id: string;
+  amount_dzd: number;
   type: 'credit' | 'debit';
   description: string;
-  date: string;
-  amountDzd: number;
-}> = [
-  {
-    id: '1',
-    type: 'debit',
-    description: 'Airport run',
-    date: 'Today, 2:45 PM • Houari Boumediene Airport',
-    amountDzd: -1400,
-  },
-  {
-    id: '2',
-    type: 'credit',
-    description: 'Funds Added',
-    date: 'Yesterday, 9:00 AM • CIB Card',
-    amountDzd: 3000,
-  },
-  {
-    id: '3',
-    type: 'debit',
-    description: 'Evening ride',
-    date: 'Oct 12, 8:30 PM • Hydra',
-    amountDzd: -850,
-  },
-];
+  status: 'pending' | 'completed' | 'failed';
+  created_at: string;
+};
 
 export const WalletScreen: React.FC = () => {
   const { t } = useTranslation();
+
+  const [balance, setBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [topupVisible, setTopupVisible] = useState(false);
+  const [topupAmount, setTopupAmount] = useState('');
+  const [topupLoading, setTopupLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [balRes, txRes] = await Promise.all([
+        walletAPI.getBalance(),
+        walletAPI.getTransactions(20, 0),
+      ]);
+      setBalance(balRes.balance_dzd);
+      setTransactions(txRes.transactions);
+    } catch {
+      Alert.alert(t('common.error'), t('wallet.loadError'));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [t]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const handleTopup = async () => {
+    const amount = parseFloat(topupAmount);
+    if (!amount || amount < 100) {
+      Alert.alert(t('common.error'), t('wallet.minAmount'));
+      return;
+    }
+    setTopupLoading(true);
+    try {
+      const res = await walletAPI.createTopup(amount);
+      setTopupVisible(false);
+      setTopupAmount('');
+      await Linking.openURL(res.checkout_url);
+    } catch {
+      Alert.alert(t('common.error'), t('wallet.topupError'));
+    } finally {
+      setTopupLoading(false);
+    }
+  };
+
+  const QUICK_AMOUNTS = [500, 1000, 2000, 5000];
+
+  const txIcon = (tx: Transaction) => {
+    if (tx.status === 'pending') return 'time-outline';
+    if (tx.status === 'failed') return 'close-circle-outline';
+    return tx.type === 'credit' ? 'arrow-down-circle-outline' : 'car-outline';
+  };
+
+  const txColor = (tx: Transaction) => {
+    if (tx.status === 'pending') return colors.onSurfaceVariant;
+    if (tx.status === 'failed') return colors.error;
+    return tx.type === 'credit' ? colors.primary : colors.onSurface;
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -60,112 +106,130 @@ export const WalletScreen: React.FC = () => {
         <Text style={styles.headerTitle}>{t('appName')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Balance Card */}
-        <View style={styles.balanceCard}>
-          <View style={styles.balanceGradient} />
-          <View style={styles.balanceContent}>
-            <Text style={styles.balanceLabel}>{t('wallet.balance')}</Text>
-            <Text style={styles.balanceAmount}>{formatCurrency(MOCK_BALANCE_DZD)}</Text>
-            <View style={styles.balanceActions}>
-              <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert(t('wallet.addFunds'), t('common.loading'))}>
-                <Ionicons name="add" size={18} color={colors.surfaceContainerLowest} />
-                <Text style={styles.addButtonText}>{t('wallet.addFunds')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.withdrawButton} onPress={() => Alert.alert(t('wallet.withdraw'), t('common.loading'))}>
-                <Text style={styles.withdrawButtonText}>{t('wallet.withdraw')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
         </View>
-
-        {/* Payment Methods */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('wallet.paymentMethods')}</Text>
-          <View style={styles.paymentGrid}>
-            {MOCK_PAYMENT_METHODS.map((method) => (
-              <TouchableOpacity
-                key={method.id}
-                style={[
-                  styles.paymentCard,
-                  method.isDefault && styles.paymentCardDefault,
-                ]}
-                onPress={() => Alert.alert(method.name, method.isDefault ? t('wallet.default') : t('common.loading'))}
-              >
-                <View style={styles.paymentLeft}>
-                  <View style={styles.paymentIconContainer}>
-                    <Ionicons
-                      name={method.type === 'card' ? 'card' : 'wallet'}
-                      size={20}
-                      color={method.isDefault ? colors.primary : colors.onSurface}
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.paymentName}>{method.name}</Text>
-                    {method.last4 && (
-                      <Text style={styles.paymentLast4}>•••• {method.last4}</Text>
-                    )}
-                  </View>
-                </View>
-                {method.isDefault && (
-                  <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultBadgeText}>{t('wallet.default')}</Text>
-                  </View>
-                )}
-                {!method.isDefault && (
-                  <Ionicons name="chevron-forward" size={20} color={colors.onSurfaceVariant} />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.addPaymentButton} onPress={() => Alert.alert(t('wallet.addNewMethod'), t('common.loading'))}>
-              <Ionicons name="add-circle" size={20} color={colors.primary} />
-              <Text style={styles.addPaymentText}>{t('wallet.addNewMethod')}</Text>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.primary} />}
+        >
+          {/* Balance card */}
+          <View style={styles.balanceCard}>
+            <View style={styles.balanceGlow} />
+            <Text style={styles.balanceLabel}>{t('wallet.balance')}</Text>
+            <Text style={styles.balanceAmount}>
+              {balance !== null ? formatCurrency(balance) : '—'}
+            </Text>
+            <TouchableOpacity style={styles.topupButton} onPress={() => setTopupVisible(true)}>
+              <Ionicons name="add" size={18} color={colors.surfaceContainerLowest} />
+              <Text style={styles.topupButtonText}>{t('wallet.addFunds')}</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('wallet.recentActivity')}</Text>
-          {MOCK_TRANSACTIONS.map((transaction) => (
-            <View key={transaction.id} style={styles.transactionItem}>
-              <View style={styles.transactionIconContainer}>
-                <Ionicons
-                  name={transaction.type === 'credit' ? 'arrow-down' : 'car'}
-                  size={20}
-                  color={transaction.type === 'credit' ? colors.primary : colors.onSurface}
-                />
-              </View>
-              <View style={styles.transactionTextContainer}>
-                <Text style={styles.transactionDescription}>{transaction.description}</Text>
-                <Text style={styles.transactionDate}>{transaction.date}</Text>
-              </View>
-              <Text style={[
-                styles.transactionAmount,
-                transaction.type === 'credit' && styles.creditAmount,
-              ]}>
-                {formatSignedCurrency(transaction.amountDzd)}
-              </Text>
+          {/* Payment methods note */}
+          <View style={styles.methodsRow}>
+            <View style={styles.methodChip}>
+              <Ionicons name="card-outline" size={16} color={colors.onSurfaceVariant} />
+              <Text style={styles.methodChipText}>EDAHABIA</Text>
             </View>
-          ))}
-          <TouchableOpacity style={styles.viewAllButton} onPress={() => Alert.alert(t('activity.title'), t('common.loading'))}>
-            <Text style={styles.viewAllText}>{t('wallet.viewAllActivity')}</Text>
+            <View style={styles.methodChip}>
+              <Ionicons name="card-outline" size={16} color={colors.onSurfaceVariant} />
+              <Text style={styles.methodChipText}>CIB</Text>
+            </View>
+            <Text style={styles.poweredBy}>{t('wallet.poweredBy')}</Text>
+          </View>
+
+          {/* Transactions */}
+          <Text style={styles.sectionTitle}>{t('wallet.recentActivity')}</Text>
+          {transactions.length === 0 ? (
+            <View style={styles.emptyTxns}>
+              <Ionicons name="receipt-outline" size={40} color={colors.onSurfaceVariant} />
+              <Text style={styles.emptyTxnsText}>{t('wallet.noTransactions')}</Text>
+            </View>
+          ) : (
+            transactions.map((tx) => (
+              <View key={tx.id} style={styles.txRow}>
+                <View style={[styles.txIconWrap, { backgroundColor: txColor(tx) + '22' }]}>
+                  <Ionicons name={txIcon(tx) as any} size={20} color={txColor(tx)} />
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txDesc} numberOfLines={1}>{tx.description}</Text>
+                  <Text style={styles.txDate}>
+                    {new Date(tx.created_at).toLocaleDateString('fr-DZ', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {tx.status === 'pending' && <Text style={styles.pendingBadge}>  {t('wallet.pending')}</Text>}
+                  </Text>
+                </View>
+                <Text style={[styles.txAmount, { color: txColor(tx) }]}>
+                  {tx.type === 'credit' ? '+' : '-'}{formatCurrency(tx.amount_dzd)}
+                </Text>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* Top-up modal */}
+      <Modal visible={topupVisible} transparent animationType="slide" onRequestClose={() => setTopupVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setTopupVisible(false)} />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>{t('wallet.addFunds')}</Text>
+          <Text style={styles.modalSubtitle}>{t('wallet.topupHint')}</Text>
+
+          {/* Quick amounts */}
+          <View style={styles.quickAmounts}>
+            {QUICK_AMOUNTS.map((a) => (
+              <TouchableOpacity
+                key={a}
+                style={[styles.quickChip, topupAmount === String(a) && styles.quickChipActive]}
+                onPress={() => setTopupAmount(String(a))}
+              >
+                <Text style={[styles.quickChipText, topupAmount === String(a) && styles.quickChipTextActive]}>
+                  {formatCurrency(a)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Custom amount */}
+          <View style={styles.amountInputRow}>
+            <TextInput
+              style={styles.amountInput}
+              placeholder={t('wallet.customAmount')}
+              placeholderTextColor={colors.onSurfaceVariant}
+              keyboardType="numeric"
+              value={topupAmount}
+              onChangeText={setTopupAmount}
+            />
+            <Text style={styles.amountCurrency}>DZD</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.confirmButton, topupLoading && { opacity: 0.6 }]}
+            onPress={handleTopup}
+            disabled={topupLoading}
+          >
+            {topupLoading
+              ? <ActivityIndicator color={colors.surfaceContainerLowest} />
+              : <Text style={styles.confirmButtonText}>{t('wallet.proceedToPayment')}</Text>
+            }
           </TouchableOpacity>
+
+          <View style={styles.chargilyBadge}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.onSurfaceVariant} />
+            <Text style={styles.chargilyBadgeText}>{t('wallet.securedByChargily')}</Text>
+          </View>
         </View>
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: spacing.md,
-  },
+  container: { flex: 1, backgroundColor: colors.surface },
+  header: { paddingHorizontal: spacing.screenPadding, paddingVertical: spacing.md },
   headerTitle: {
     fontFamily: typography.fontFamily.headline,
     fontSize: typography.fontSize.bodyMedium,
@@ -174,203 +238,239 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: colors.primary,
   },
-  scrollContent: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingBottom: spacing.xxl,
-  },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scrollContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxl },
+
+  // Balance card
   balanceCard: {
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: spacing.borderRadius.xl,
     padding: spacing.xl,
-    marginBottom: spacing.xl,
-    minHeight: 200,
+    marginBottom: spacing.md,
+    minHeight: 180,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  balanceGradient: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: colors.primary + '1A',
-  },
-  balanceContent: {
-    position: 'relative',
-    zIndex: 1,
-  },
+  balanceGlow: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.primary + '18' },
   balanceLabel: {
     fontFamily: typography.fontFamily.label,
-    fontSize: 12,
+    fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     color: colors.onSurfaceVariant,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   balanceAmount: {
     fontFamily: typography.fontFamily.headline,
-    fontSize: 48,
+    fontSize: 44,
     fontWeight: '500' as any,
     color: colors.onSurface,
     marginBottom: spacing.lg,
   },
-  balanceActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  addButton: {
+  topupButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    alignSelf: 'flex-start',
     backgroundColor: colors.primary,
     borderRadius: spacing.borderRadius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  addButtonText: {
+  topupButtonText: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.bodySmall,
-    fontWeight: '500' as any,
+    fontWeight: '600' as any,
     color: colors.surfaceContainerLowest,
   },
-  withdrawButton: {
-    backgroundColor: colors.surfaceContainerHighest,
-    borderRadius: spacing.borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  withdrawButtonText: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodySmall,
-    fontWeight: '500' as any,
-    color: colors.onSurface,
-  },
-  section: {
+
+  // Payment methods chips
+  methodsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.xl,
+    flexWrap: 'wrap',
   },
-  sectionTitle: {
-    fontFamily: typography.fontFamily.headline,
-    fontSize: 24,
-    fontWeight: '500' as any,
-    color: colors.onSurface,
-    marginBottom: spacing.md,
-  },
-  paymentGrid: {
-    gap: spacing.md,
-  },
-  paymentCard: {
+  methodChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 4,
     backgroundColor: colors.surfaceContainerLow,
-    borderRadius: spacing.borderRadius.xl,
-    padding: spacing.md,
-  },
-  paymentCardDefault: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderWidth: 1,
-    borderColor: colors.primary + '33',
-  },
-  paymentLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  paymentIconContainer: {
-    width: 48,
-    height: 32,
-    borderRadius: spacing.borderRadius.lg,
-    backgroundColor: colors.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paymentName: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodyMedium,
-    fontWeight: '500' as any,
-    color: colors.onSurface,
-  },
-  paymentLast4: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodySmall,
-    color: colors.onSurfaceVariant,
-  },
-  defaultBadge: {
-    backgroundColor: colors.primary + '1A',
     borderRadius: spacing.borderRadius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
-  defaultBadgeText: {
+  methodChipText: {
     fontFamily: typography.fontFamily.label,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    color: colors.primary,
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
+    fontWeight: '600' as any,
   },
-  addPaymentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.outlineVariant + '4D',
-    borderRadius: spacing.borderRadius.xl,
-  },
-  addPaymentText: {
+  poweredBy: {
     fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.bodyMedium,
-    fontWeight: '500' as any,
-    color: colors.primary,
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
+    marginLeft: 'auto',
+    opacity: 0.6,
   },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: spacing.borderRadius.xl,
-    padding: spacing.md,
+
+  // Transactions
+  sectionTitle: {
+    fontFamily: typography.fontFamily.headline,
+    fontSize: 20,
+    fontWeight: '600' as any,
+    color: colors.onSurface,
     marginBottom: spacing.md,
   },
-  transactionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: spacing.borderRadius.full,
-    backgroundColor: colors.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  transactionTextContainer: {
-    flex: 1,
-  },
-  transactionDescription: {
+  emptyTxns: { alignItems: 'center', paddingVertical: spacing.xxxl, gap: spacing.md },
+  emptyTxnsText: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.bodyMedium,
-    fontWeight: '500' as any,
-    color: colors.onSurface,
+    color: colors.onSurfaceVariant,
   },
-  transactionDate: {
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHigh,
+  },
+  txIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txInfo: { flex: 1 },
+  txDesc: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.onSurface,
+    fontWeight: '500' as any,
+  },
+  txDate: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.bodySmall,
     color: colors.onSurfaceVariant,
     marginTop: 2,
   },
-  transactionAmount: {
+  pendingBadge: {
+    fontFamily: typography.fontFamily.label,
+    fontSize: 10,
+    color: colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  txAmount: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.bodyMedium,
-    fontWeight: '500' as any,
+    fontWeight: '600' as any,
+  },
+
+  // Modal sheet
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalSheet: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.md,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.outlineVariant,
+    alignSelf: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontFamily: typography.fontFamily.headline,
+    fontSize: 22,
+    fontWeight: '700' as any,
     color: colors.onSurface,
   },
-  creditAmount: {
-    color: colors.primary,
+  modalSubtitle: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.onSurfaceVariant,
   },
-  viewAllButton: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
+  quickAmounts: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    marginTop: spacing.sm,
   },
-  viewAllText: {
+  quickChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.borderRadius.full,
+    backgroundColor: colors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  quickChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '22',
+  },
+  quickChipText: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurface,
     fontWeight: '500' as any,
-    color: colors.primary,
+  },
+  quickChipTextActive: { color: colors.primary, fontWeight: '700' as any },
+  amountInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: spacing.borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+  },
+  amountInput: {
+    flex: 1,
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.titleMedium,
+    color: colors.onSurface,
+    paddingVertical: spacing.md,
+  },
+  amountCurrency: {
+    fontFamily: typography.fontFamily.label,
+    fontSize: 13,
+    color: colors.onSurfaceVariant,
+    fontWeight: '600' as any,
+  },
+  confirmButton: {
+    backgroundColor: colors.primary,
+    borderRadius: spacing.borderRadius.lg,
+    paddingVertical: spacing.md + 2,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  confirmButtonText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    fontWeight: '700' as any,
+    color: colors.surfaceContainerLowest,
+  },
+  chargilyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    justifyContent: 'center',
+    opacity: 0.6,
+  },
+  chargilyBadgeText: {
+    fontFamily: typography.fontFamily.label,
+    fontSize: 11,
+    color: colors.onSurfaceVariant,
   },
 });

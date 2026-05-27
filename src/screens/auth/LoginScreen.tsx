@@ -20,6 +20,12 @@ import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import {
+  formatAlgerianLocalDisplay,
+  isValidAlgerianLocal,
+  normalizeAlgerianLocalInput,
+  toAlgerianE164,
+} from '../../utils/phone';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -32,11 +38,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!phoneNumber) return;
+    if (!isValidAlgerianLocal(phoneNumber)) {
+      Alert.alert(t('common.error'), t('auth.invalidPhoneLocal'));
+      return;
+    }
+    const e164 = toAlgerianE164(phoneNumber);
     setIsLoading(true);
     try {
-      await login(phoneNumber);
-      navigation.navigate('OtpVerification', { phoneNumber });
+      await login(e164);
+      navigation.navigate('OtpVerification', { phoneNumber: e164 });
     } catch (error) {
       console.error('Failed to send OTP:', error);
     } finally {
@@ -74,7 +84,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Phone Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Phone Number</Text>
+            <Text style={styles.inputLabel}>{t('auth.phoneNumber')}</Text>
             <View style={styles.phoneInputContainer}>
               <View style={styles.countryCodeContainer}>
                 <Text style={styles.countryCodeText}>DZ +213</Text>
@@ -88,12 +98,13 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 />
                 <TextInput
                   style={styles.phoneInput}
-                  placeholder="+1 (555) 000-0000"
+                  placeholder={t('auth.phoneLocalPlaceholder')}
                   placeholderTextColor={colors.onSurfaceVariant + '80'}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
+                  value={formatAlgerianLocalDisplay(phoneNumber)}
+                  onChangeText={(text) => setPhoneNumber(normalizeAlgerianLocalInput(text))}
                   keyboardType="phone-pad"
                   autoComplete="tel"
+                  maxLength={11}
                 />
                 <View style={styles.focusLine} />
               </View>

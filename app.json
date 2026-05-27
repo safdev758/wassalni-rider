@@ -12,15 +12,32 @@
       "buildNumber": "1.0.0",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Wasselni needs your location to find nearby drivers and calculate your ride price.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Wasselni needs your location to find nearby drivers and calculate your ride price."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Wasselni needs your location to find nearby drivers and calculate your ride price.",
+        "NSCameraUsageDescription": "Wasselni uses the camera for in-ride video calls with your driver.",
+        "NSMicrophoneUsageDescription": "Wasselni uses the microphone for in-ride voice and video calls.",
+        "NSPhotoLibraryUsageDescription": "Wasselni needs access to your photos to set a profile picture."
       }
     },
+    "scheme": "wasselni",
     "android": {
       "package": "com.wassalni.rider",
       "versionCode": 1,
+      "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "CAMERA",
+        "MODIFY_AUDIO_SETTINGS",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "wasselni", "host": "wallet" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "plugins": [
@@ -30,6 +47,28 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Wasselni needs your location to find nearby drivers and calculate your ride price."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#C8F542"
+        }
+      ],
+      "expo-av",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Wasselni to use the camera for in-ride video calls.",
+          "microphonePermission": "Allow Wasselni to use the microphone for in-ride calls.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Wasselni to choose a profile photo from your library."
         }
       ]
     ]

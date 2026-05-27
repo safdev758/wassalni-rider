@@ -1,41 +1,136 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, I18nManager, Platform } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useRide } from '../../context/RideContext';
+import { decodePolyline } from '../../utils/polyline';
+import { useRideCallActions } from '../../hooks/useRideCallActions';
+import { SAFETY_SEVERITY_COLORS } from '../../constants/safetySeverity';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
+const SEVERITY_COLORS = SAFETY_SEVERITY_COLORS;
+
 export const RideTrackingScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
-  const { driver, completeRide } = useRide();
+  const { driver, safetyAlert, clearSafetyAlert, eta, progressPct, driverCoords, pickupCoords, dropoffCoords, routePolyline, rideId } = useRide();
+  const { t } = useTranslation();
+
+  const routeCoordinates = routePolyline
+    ? decodePolyline(routePolyline)
+    : pickupCoords && dropoffCoords
+      ? [
+          { latitude: pickupCoords.latitude, longitude: pickupCoords.longitude },
+          { latitude: dropoffCoords.latitude, longitude: dropoffCoords.longitude },
+        ]
+      : [];
+  const { startAudioCall, startVideoCall } = useRideCallActions({
+    rideId,
+    peerType: 'driver',
+    peerId: driver?.id,
+    peerName: driver?.name ?? t('ride.driver'),
+  });
+
+  const mapRegion = driverCoords
+    ? { latitude: driverCoords.latitude, longitude: driverCoords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }
+    : pickupCoords
+    ? { latitude: pickupCoords.latitude, longitude: pickupCoords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }
+    : { latitude: 36.7538, longitude: 3.0588, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+
+  useEffect(() => {
+    if (!safetyAlert || safetyAlert.severity === 'high') return;
+    const timer = setTimeout(clearSafetyAlert, 8000);
+    return () => clearTimeout(timer);
+  }, [safetyAlert, clearSafetyAlert]);
 
   if (!driver) return null;
 
+  const alertColor = safetyAlert ? (SEVERITY_COLORS[safetyAlert.severity] ?? SEVERITY_COLORS.high) : SEVERITY_COLORS.high;
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Map background */}
-      <View style={styles.mapArea} />
+      {/* Map */}
+      <MapView
+        style={styles.mapArea}
+        provider={Platform.OS === 'android' ? 'google' : PROVIDER_DEFAULT}
+        region={mapRegion}
+        showsUserLocation={false}
+        showsCompass={false}
+      >
+        {driverCoords && (
+          <Marker coordinate={driverCoords} title={driver?.name ?? 'Driver'} pinColor={colors.primary} />
+        )}
+        {pickupCoords && (
+          <Marker coordinate={{ latitude: pickupCoords.latitude, longitude: pickupCoords.longitude }} title={t('ride.pickup') ?? 'Pickup'} pinColor={colors.secondary} />
+        )}
+        {dropoffCoords && (
+          <Marker coordinate={{ latitude: dropoffCoords.latitude, longitude: dropoffCoords.longitude }} title={t('ride.dropoff') ?? 'Dropoff'} pinColor={colors.error} />
+        )}
+        {routeCoordinates.length > 1 && (
+          <Polyline
+            coordinates={routeCoordinates}
+            strokeColor={colors.primary}
+            strokeWidth={4}
+          />
+        )}
+        {driverCoords && (
+          <Polyline
+            coordinates={[
+              { latitude: driverCoords.latitude, longitude: driverCoords.longitude },
+              ...(routeCoordinates[0] ? [routeCoordinates[0]] : pickupCoords ? [{ latitude: pickupCoords.latitude, longitude: pickupCoords.longitude }] : []),
+            ]}
+            strokeColor={colors.secondary}
+            strokeWidth={3}
+            lineDashPattern={[8, 6]}
+          />
+        )}
+      </MapView>
+
+      {/* Safety alert banner */}
+      {safetyAlert && (
+        <View style={[styles.alertBanner, { backgroundColor: alertColor }]}>
+          <Ionicons name="warning" size={18} color="#fff" />
+          <Text style={styles.alertText} numberOfLines={2}>{safetyAlert.detail}</Text>
+          <TouchableOpacity
+            onPress={clearSafetyAlert}
+            style={styles.alertClose}
+            accessibilityLabel={t('common.close')}
+            accessibilityRole="button"
+          >
+            <Ionicons name="close" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Top status pill */}
       <View style={styles.statusPill}>
         <View style={styles.statusDot} />
-        <Text style={styles.statusText}>On the way</Text>
+        <Text style={styles.statusText}>{t('ride.onTheWay')}</Text>
       </View>
 
       {/* Floating ETA */}
       <View style={styles.etaContainer}>
-        <Text style={styles.etaText}>
-          4<Text style={styles.etaUnit}>min</Text>
-        </Text>
-        <Text style={styles.etaSubtitle}>Arriving at 8:42 PM</Text>
+        {eta ? (
+          <Text style={styles.etaText}>
+            {eta.replace(' min', '')}<Text style={styles.etaUnit}> min</Text>
+          </Text>
+        ) : (
+          <Text style={styles.etaText}><Text style={styles.etaUnit}>--</Text></Text>
+        )}
+        {eta && (
+          <Text style={styles.etaSubtitle}>
+            {t('ride.arrivingAt')} {new Date(Date.now() + parseInt(eta) * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        )}
       </View>
 
       {/* Bottom trip card */}
@@ -43,9 +138,9 @@ export const RideTrackingScreen: React.FC = () => {
         {/* Progress bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: '75%' }]} />
+            <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
           </View>
-          <View style={[styles.progressMarker, { left: '75%' }]}>
+          <View style={[styles.progressMarker, { left: `${progressPct}%` }]}>
             <Ionicons name="car" size={14} color={colors.primary} />
           </View>
         </View>
@@ -72,26 +167,28 @@ export const RideTrackingScreen: React.FC = () => {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.contactButton} onPress={() => Alert.alert('Call Driver', 'WebRTC call coming soon')}>
-            <Ionicons name="call" size={18} color={colors.surface} />
-            <Text style={styles.contactButtonText}>Contact</Text>
+          <TouchableOpacity style={styles.contactButton} onPress={() => navigation.navigate('Chat')}>
+            <Ionicons name="chatbubble" size={18} color={colors.surface} />
+            <Text style={styles.contactButtonText}>{t('ride.message')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.safetyButton} onPress={() => navigation.navigate('Report')}>
+          <TouchableOpacity style={styles.contactButton} onPress={startAudioCall}>
+            <Ionicons name="call" size={18} color={colors.surface} />
+            <Text style={styles.contactButtonText}>{t('ride.audioCall')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.contactButton} onPress={startVideoCall}>
+            <Ionicons name="videocam" size={18} color={colors.surface} />
+            <Text style={styles.contactButtonText}>{t('ride.videoCall')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.safetyButton}
+            onPress={() => navigation.navigate('Report')}
+            accessibilityLabel={t('ride.safety')}
+            accessibilityRole="button"
+          >
             <Ionicons name="shield" size={20} color={colors.onSurface} />
           </TouchableOpacity>
         </View>
 
-        {/* Complete ride button (for testing) */}
-        <TouchableOpacity
-          style={styles.completeButton}
-          onPress={() => {
-            completeRide();
-            navigation.replace('RateTrip');
-          }}
-          activeOpacity={0.95}
-        >
-          <Text style={styles.completeButtonText}>Complete Ride (Test)</Text>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -105,6 +202,33 @@ const styles = StyleSheet.create({
   mapArea: {
     flex: 1,
     backgroundColor: colors.surfaceContainerLowest,
+  },
+  alertBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  alertText: {
+    flex: 1,
+    color: '#fff',
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodySmall,
+    fontWeight: '600' as any,
+  },
+  alertClose: {
+    padding: 4,
   },
   statusPill: {
     position: 'absolute',

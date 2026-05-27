@@ -5,36 +5,57 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Card } from '../../components/common/Card';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import {
+  formatAlgerianLocalDisplay,
+  isValidAlgerianLocal,
+  normalizeAlgerianLocalInput,
+  toAlgerianE164,
+} from '../../utils/phone';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
 export const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const { t } = useTranslation();
+  const { signup } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [gender, setGender] = useState<'female' | 'male' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async () => {
+    if (!fullName.trim() || !phoneNumber.trim() || !gender) {
+      return;
+    }
+    if (!isValidAlgerianLocal(phoneNumber)) {
+      Alert.alert(t('common.error'), t('auth.invalidPhoneLocal'));
+      return;
+    }
+    const formatted = toAlgerianE164(phoneNumber);
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await signup(fullName.trim(), formatted, gender);
+      navigation.navigate('OtpVerification', { phoneNumber: formatted });
+    } catch {
+      // OTP send errors surface on verification retry
+    } finally {
       setIsLoading(false);
-      navigation.navigate('OtpVerification', { phoneNumber });
-    }, 1500);
+    }
   };
 
   return (
@@ -68,12 +89,33 @@ export const SignupScreen: React.FC<Props> = ({ navigation }) => {
           <Input
             label={t('auth.phoneNumber')}
             prefix="+213"
-            placeholder="555 123 456"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
+            placeholder={t('auth.phoneLocalPlaceholder')}
+            value={formatAlgerianLocalDisplay(phoneNumber)}
+            onChangeText={(text) => setPhoneNumber(normalizeAlgerianLocalInput(text))}
             keyboardType="phone-pad"
             autoComplete="tel"
+            maxLength={11}
           />
+
+          <Text style={styles.genderLabel}>{t('auth.gender')}</Text>
+          <View style={styles.genderRow}>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
+              onPress={() => setGender('female')}
+            >
+              <Text style={[styles.genderBtnText, gender === 'female' && styles.genderBtnTextActive]}>
+                {t('auth.genderFemale')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
+              onPress={() => setGender('male')}
+            >
+              <Text style={[styles.genderBtnText, gender === 'male' && styles.genderBtnTextActive]}>
+                {t('auth.genderMale')}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <Input
             label={t('auth.email')}
@@ -153,6 +195,38 @@ const styles = StyleSheet.create({
   formCard: {
     padding: spacing.lg,
     marginBottom: spacing.lg,
+  },
+  genderLabel: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurfaceVariant,
+    marginBottom: spacing.sm,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  genderBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: spacing.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    alignItems: 'center',
+  },
+  genderBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
+  },
+  genderBtnText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.onSurfaceVariant,
+  },
+  genderBtnTextActive: {
+    color: colors.onPrimaryContainer,
+    fontWeight: '600' as never,
   },
   signupButton: {
     marginTop: spacing.md,

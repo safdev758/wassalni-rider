@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,7 +10,9 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { MapViewWrapper } from '../../components/common/MapViewWrapper';
+import { PrimaryMapMarker } from '../../components/common/PrimaryMapMarker';
+import { darkMapStyle } from '../../theme/mapStyle';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +20,7 @@ import * as Location from 'expo-location';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useRide } from '../../context/RideContext';
+import { useAuth } from '../../context/AuthContext';
 import { locationAPI } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -30,7 +34,8 @@ type RecentLocation = { id: string; name: string; address: string };
 export const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { startSearch, setPickupLocation, setDropoffLocation } = useRide();
+  const { setPickupLocation, setDropoffLocation, startSearch } = useRide();
+  const { isAuthenticated } = useAuth(); // still needed for saved locations fetch
   const [location, setLocation] = useState<{ latitude: number; longitude: number }>({
     latitude: 36.7538,
     longitude: 3.0588,
@@ -57,38 +62,47 @@ export const HomeScreen: React.FC = () => {
       }
     })();
 
+  }, []);
+
+  const loadSavedLocations = useCallback(() => {
+    if (!isAuthenticated) return;
     locationAPI.getSaved().then((res) => {
       if (res?.locations) setSavedLocations(res.locations);
     }).catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSavedLocations();
+    }, [loadSavedLocations]),
+  );
+
+  const openAddSavedLocation = () => {
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
+    navigation.navigate('AddSavedLocation');
+  };
 
   const currentAddress = t('home.currentLocation');
 
   const handleSearchPress = () => {
-    setPickupLocation({ address: currentAddress, latitude: location.latitude, longitude: location.longitude });
-    startSearch(currentAddress, t('home.enterDestination'));
-    navigation.navigate('Searching');
+    navigation.navigate('DestinationSearch');
   };
 
   const handleLocationPress = (saved: SavedLocation) => {
     setPickupLocation({ address: currentAddress, latitude: location.latitude, longitude: location.longitude });
     setDropoffLocation({ address: saved.address, latitude: saved.lat, longitude: saved.lng });
     startSearch(currentAddress, saved.address);
-    navigation.navigate('Searching');
+    navigation.navigate('RideOptions');
   };
 
   return (
     <View style={styles.container}>
       {/* Map Background */}
-      <MapView
-        provider={PROVIDER_DEFAULT}
+      <MapViewWrapper
         style={styles.map}
-        initialRegion={{
-          latitude: location.latitude,
-          longitude: location.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
         region={{
           latitude: location.latitude,
           longitude: location.longitude,
@@ -96,24 +110,10 @@ export const HomeScreen: React.FC = () => {
           longitudeDelta: 0.0421,
         }}
         customMapStyle={darkMapStyle}
-      >
-        <Marker
-          coordinate={{ latitude: location.latitude, longitude: location.longitude }}
-          title={t('home.currentLocation')}
-        >
-          <View style={styles.markerContainer}>
-            {/* Pulse effect */}
-            <View style={styles.markerPulse} />
-            {/* Pin */}
-            <View style={styles.markerDot}>
-              <Ionicons name="car" size={12} color={colors.surface} />
-            </View>
-            {/* Stem */}
-            <View style={styles.markerStem} />
-            <View style={styles.markerShadow} />
-          </View>
-        </Marker>
-      </MapView>
+        markerCoordinate={{ latitude: location.latitude, longitude: location.longitude }}
+        markerTitle={t('home.currentLocation')}
+        markerChildren={<PrimaryMapMarker icon="car" />}
+      />
 
       {/* Top Safe Area Overlay */}
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -143,9 +143,6 @@ export const HomeScreen: React.FC = () => {
               <Text style={styles.searchTitle}>{t('home.whereTo')}</Text>
               <Text style={styles.searchSubtitle}>{t('home.enterDestination')}</Text>
             </View>
-            <TouchableOpacity style={styles.scheduleButton} onPress={() => Alert.alert('Schedule', 'Ride scheduling coming soon.')}>
-              <Ionicons name="time-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
           </View>
         </TouchableOpacity>
 
@@ -172,29 +169,53 @@ export const HomeScreen: React.FC = () => {
 
           {/* Suggested Destinations */}
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>{t('home.suggested')}</Text>
-            <View style={styles.suggestedGrid}>
-              {savedLocations.map((loc) => (
-                <TouchableOpacity
-                  key={loc.id}
-                  style={styles.suggestedCard}
-                  onPress={() => handleLocationPress(loc)}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.suggestedIconContainer}>
-                    <Ionicons
-                      name={loc.name.toLowerCase().includes('home') ? 'home' : 'briefcase'}
-                      size={18}
-                      color={loc.name.toLowerCase().includes('home') ? colors.primary : colors.onSurface}
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.suggestedName}>{loc.name}</Text>
-                    <Text style={styles.suggestedDistance}>{loc.address}</Text>
-                  </View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t('home.suggested')}</Text>
+              {isAuthenticated && (
+                <TouchableOpacity onPress={openAddSavedLocation} style={styles.addIconBtn}>
+                  <Ionicons name="add-circle" size={26} color={colors.primary} />
                 </TouchableOpacity>
-              ))}
+              )}
             </View>
+            {savedLocations.length === 0 ? (
+              <View style={styles.emptyLocations}>
+                <Ionicons name="location-outline" size={32} color={colors.onSurfaceVariant} />
+                <Text style={styles.emptyLocationsText}>{t('home.noSavedLocations')}</Text>
+                <TouchableOpacity
+                  style={styles.addLocationButton}
+                  onPress={openAddSavedLocation}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home.addYourFirst')}
+                >
+                  <Text style={styles.addLocationText}>{t('home.addYourFirst')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.suggestedGrid}>
+                {savedLocations.map((loc) => (
+                  <TouchableOpacity
+                    key={loc.id}
+                    style={styles.suggestedCard}
+                    onPress={() => handleLocationPress(loc)}
+                    activeOpacity={0.9}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${loc.name}, ${loc.address}`}
+                  >
+                    <View style={styles.suggestedIconContainer}>
+                      <Ionicons
+                        name={loc.name.toLowerCase().includes('home') ? 'home' : 'briefcase'}
+                        size={18}
+                        color={loc.name.toLowerCase().includes('home') ? colors.primary : colors.onSurface}
+                      />
+                    </View>
+                    <View>
+                      <Text style={styles.suggestedName}>{loc.name}</Text>
+                      <Text style={styles.suggestedDistance}>{loc.address}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Recent Places */}
@@ -225,27 +246,6 @@ export const HomeScreen: React.FC = () => {
     </View>
   );
 };
-
-const darkMapStyle = [
-  { elementType: 'geometry', stylers: [{ color: '#1d1d1d' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#e2e2e2' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1d1d1d' }] },
-  {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [{ color: '#2a2a2a' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [{ color: '#3b67ff' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{ color: '#131313' }],
-  },
-];
 
 const styles = StyleSheet.create({
   container: {
@@ -281,46 +281,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 24,
     elevation: 8,
-  },
-  markerContainer: {
-    alignItems: 'center',
-  },
-  markerPulse: {
-    position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary + '40',
-  },
-  markerDot: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: colors.surface,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  markerStem: {
-    width: 4,
-    height: 32,
-    backgroundColor: colors.primary,
-    opacity: 0.5,
-    marginTop: -4,
-  },
-  markerShadow: {
-    width: 12,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#000',
-    opacity: 0.6,
-    marginTop: -2,
   },
   bottomSheet: {
     position: 'absolute',
@@ -386,14 +346,6 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     marginTop: 2,
   },
-  scheduleButton: {
-    width: 40,
-    height: 40,
-    borderRadius: spacing.borderRadius.full,
-    backgroundColor: colors.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   panelScroll: {
     flex: 1,
   },
@@ -436,6 +388,16 @@ const styles = StyleSheet.create({
   sectionContainer: {
     marginBottom: spacing.lg,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    paddingRight: spacing.xs,
+  },
+  addIconBtn: {
+    padding: 2,
+  },
   sectionTitle: {
     fontFamily: typography.fontFamily.label,
     fontSize: typography.fontSize.labelMedium,
@@ -443,8 +405,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: typography.letterSpacing.wider,
     color: colors.onSurfaceVariant,
-    marginBottom: spacing.md,
     marginLeft: spacing.xs,
+    marginBottom: 0,
   },
   suggestedGrid: {
     flexDirection: 'row',
@@ -505,5 +467,29 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.bodySmall,
     color: colors.onSurfaceVariant,
     marginTop: 2,
+  },
+  emptyLocations: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: spacing.borderRadius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyLocationsText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.onSurfaceVariant,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  addLocationButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  addLocationText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.primary,
+    fontWeight: '600' as any,
   },
 });

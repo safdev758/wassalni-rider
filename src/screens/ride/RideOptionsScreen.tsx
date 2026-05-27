@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useRide } from '../../context/RideContext';
+import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -18,7 +19,21 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 export const RideOptionsScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { options, selectOption, confirmRide, pickup, dropoff } = useRide();
+  const {
+    options, selectOption, confirmRide, pickup, dropoff,
+    paymentMethod, setPaymentMethod, womenOnly, setWomenOnly, walletBalanceDzd,
+    tripDistanceKm, tripDurationMin,
+  } = useRide();
+  const { isAuthenticated } = useAuth();
+
+  const selected = options.find((o) => o.selected);
+  const tripSummary =
+    tripDistanceKm != null && tripDurationMin != null
+      ? t('rideOptions.tripSummary', {
+          distance: tripDistanceKm.toFixed(1),
+          duration: tripDurationMin,
+        })
+      : t('rideOptions.findingOptimalRoute');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -32,7 +47,7 @@ export const RideOptionsScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.routeBadge}>
           <View style={styles.routeDot} />
-          <Text style={styles.routeBadgeText}>{t('rideOptions.findingOptimalRoute')}</Text>
+          <Text style={styles.routeBadgeText} numberOfLines={1}>{tripSummary}</Text>
         </View>
       </View>
 
@@ -58,6 +73,12 @@ export const RideOptionsScreen: React.FC = () => {
 
         {/* Ride options */}
         <View style={styles.optionsContainer}>
+          {options.length === 0 && (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.loadingText}>{t('rideOptions.loadingPrices')}</Text>
+            </View>
+          )}
           {options.map((option) => (
             <TouchableOpacity
               key={option.id}
@@ -67,6 +88,9 @@ export const RideOptionsScreen: React.FC = () => {
               ]}
               onPress={() => selectOption(option)}
               activeOpacity={0.9}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: option.selected }}
+              accessibilityLabel={`${option.name}, ${option.seats} seats, ${formatCurrency(option.priceDzd)}, ${option.eta} away`}
             >
               {option.selected && <View style={styles.selectedGradient} />}
               <View style={styles.optionContent}>
@@ -83,17 +107,22 @@ export const RideOptionsScreen: React.FC = () => {
                         <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
                       )}
                     </View>
+                    {option.description ? (
+                      <Text style={styles.optionDescription} numberOfLines={2}>{option.description}</Text>
+                    ) : null}
                     <View style={styles.optionBadges}>
                       <View style={styles.seatBadge}>
                         <Text style={styles.seatBadgeText}>{option.seats} {t('rideOptions.seatsSuffix')}</Text>
                       </View>
-                      <Text style={styles.etaText}>{option.eta} {t('rideOptions.etaAway')}</Text>
+                      <Text style={styles.etaText}>
+                        {t('rideOptions.driverEta', { eta: option.eta.replace(/\s*min$/, '') })}
+                      </Text>
                     </View>
                   </View>
                 </View>
                 <View style={styles.optionPrice}>
                   <Text style={styles.priceText}>{formatCurrency(option.priceDzd)}</Text>
-                  {option.originalPriceDzd !== undefined && (
+                  {option.originalPriceDzd != null && option.originalPriceDzd > option.priceDzd && (
                     <Text style={styles.originalPrice}>{formatCurrency(option.originalPriceDzd)}</Text>
                   )}
                 </View>
@@ -110,19 +139,56 @@ export const RideOptionsScreen: React.FC = () => {
             <View style={styles.paymentIconContainer}>
               <Ionicons name="card" size={20} color={colors.onSurface} />
             </View>
-            <Text style={styles.paymentName}>{t('rideOptions.cashPayment')}</Text>
+            <Text style={styles.paymentName}>
+              {paymentMethod === 'wallet' ? t('rideOptions.walletPayment') : t('rideOptions.cashPayment')}
+            </Text>
+            {paymentMethod === 'wallet' && walletBalanceDzd != null && (
+              <Text style={styles.walletBalanceHint}>
+                {t('wallet.balance')}: {walletBalanceDzd} DZD
+              </Text>
+            )}
           </View>
-          <TouchableOpacity onPress={() => Alert.alert(t('wallet.paymentMethods'), t('common.loading'))}>
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(t('rideOptions.changePayment'), undefined, [
+                { text: t('rideOptions.cashPayment'), onPress: () => setPaymentMethod('cash') },
+                { text: t('rideOptions.walletPayment'), onPress: () => setPaymentMethod('wallet') },
+                { text: t('common.cancel'), style: 'cancel' },
+              ]);
+            }}
+          >
             <Text style={styles.changePaymentText}>{t('rideOptions.changePayment')}</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
+          style={[styles.womenOnlyRow, womenOnly && styles.womenOnlyRowActive]}
+          onPress={() => setWomenOnly(!womenOnly)}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: womenOnly }}
+        >
+          <Ionicons name="shield-checkmark" size={22} color={womenOnly ? colors.primary : colors.onSurfaceVariant} />
+          <View style={styles.womenOnlyText}>
+            <Text style={styles.womenOnlyTitle}>{t('rideOptions.womenOnlyTitle')}</Text>
+            <Text style={styles.womenOnlySub}>{t('rideOptions.womenOnlySub')}</Text>
+          </View>
+          <Ionicons name={womenOnly ? 'checkbox' : 'square-outline'} size={24} color={colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
           style={styles.confirmButton}
-          onPress={confirmRide}
+          onPress={() => {
+            if (!isAuthenticated) {
+              navigation.navigate('Login');
+              return;
+            }
+            confirmRide();
+          }}
           activeOpacity={0.95}
+          accessibilityRole="button"
+          accessibilityLabel={`Confirm ${selected?.name ?? 'ride'}`}
+          disabled={!selected || selected.priceDzd <= 0}
         >
           <Text style={styles.confirmButtonText}>
-            {t('ride.confirm')} {options.find(o => o.selected)?.name ?? ''}
+            {t('ride.confirm')} {selected?.name ?? ''}
           </Text>
           <Ionicons name="arrow-forward" size={20} color={colors.surface} />
         </TouchableOpacity>
@@ -218,19 +284,32 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  loadingBox: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodyMedium,
+    color: colors.onSurfaceVariant,
+  },
   optionCard: {
     backgroundColor: colors.surfaceContainerLow,
     borderRadius: spacing.borderRadius.xl,
     padding: spacing.md,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   optionCardSelected: {
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: colors.primary + '15',
+    borderColor: colors.primary,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
-    elevation: 2,
+    elevation: 4,
   },
   selectedGradient: {
     position: 'absolute',
@@ -271,6 +350,13 @@ const styles = StyleSheet.create({
   },
   optionNameSelected: {
     color: colors.primary,
+  },
+  optionDescription: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurfaceVariant,
+    marginTop: 2,
+    maxWidth: 200,
   },
   optionBadges: {
     flexDirection: 'row',
@@ -340,6 +426,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  walletBalanceHint: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurfaceVariant,
+    marginTop: 2,
+  },
   paymentName: {
     fontFamily: typography.fontFamily.headline,
     fontSize: typography.fontSize.bodySmall,
@@ -351,6 +443,33 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.bodySmall,
     fontWeight: '500' as any,
     color: colors.primary,
+  },
+  womenOnlyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.sm,
+    borderRadius: spacing.borderRadius.lg,
+    backgroundColor: colors.surfaceContainerLow,
+  },
+  womenOnlyRowActive: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  womenOnlyText: { flex: 1 },
+  womenOnlyTitle: {
+    fontFamily: typography.fontFamily.headline,
+    fontSize: typography.fontSize.bodyMedium,
+    fontWeight: '600' as never,
+    color: colors.onSurface,
+  },
+  womenOnlySub: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurfaceVariant,
+    marginTop: 2,
   },
   confirmButton: {
     flexDirection: 'row',

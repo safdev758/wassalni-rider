@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { RootStackParamList } from '../../navigation/RootNavigator';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { notificationAPI } from '../../services/api';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,28 +37,27 @@ interface NotificationHistory {
   read: boolean;
 }
 
+const PREF_KEYS = ['rides', 'promos', 'safety'] as const;
+type PrefKey = (typeof PREF_KEYS)[number];
+
+const DEFAULT_PREFS: Record<PrefKey, boolean> = { rides: true, promos: true, safety: true };
+
 export const NotificationsScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: '1', title: 'Ride Updates', description: 'Get notified about your ride status', enabled: true },
-    { id: '2', title: 'Promotions', description: 'Receive special offers and discounts', enabled: true },
-    { id: '3', title: 'Messages', description: 'Driver and support messages', enabled: true },
-    { id: '4', title: 'Account Activity', description: 'Security and account updates', enabled: true },
-  ]);
+  const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>(DEFAULT_PREFS);
 
-  const [history, setHistory] = useState<NotificationHistory[]>([
-    { id: '1', title: 'Ride Completed', message: 'Your ride to JFK Airport was completed', time: '2 hours ago', type: 'ride', read: true },
-    { id: '2', title: 'Special Offer', message: 'Get 20% off your next ride with code WASSALNI20', time: 'Yesterday', type: 'promotion', read: false },
-    { id: '3', title: 'Payment Successful', message: 'Your payment of 1,400 DA was processed', time: '2 days ago', type: 'account', read: true },
-    { id: '4', title: 'Driver Arrived', message: 'Your driver has arrived at pickup location', time: '3 days ago', type: 'ride', read: true },
-  ]);
+  useEffect(() => {
+    notificationAPI.getPreferences()
+      .then((data: Record<PrefKey, boolean>) => setPrefs({ ...DEFAULT_PREFS, ...data }))
+      .catch(() => {});
+  }, []);
 
-  const toggleNotification = (id: string) => {
-    setNotifications(notifications.map(item => 
-      item.id === id ? { ...item, enabled: !item.enabled } : item
-    ));
-  };
+  const togglePref = useCallback(async (key: PrefKey) => {
+    const updated = { ...prefs, [key]: !prefs[key] };
+    setPrefs(updated);
+    await notificationAPI.updatePreferences(updated).catch(() => {});
+  }, [prefs]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -70,45 +70,20 @@ export const NotificationsScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Notification Preferences</Text>
-        {notifications.map((item) => (
-          <View key={item.id} style={styles.notificationItem}>
+        <Text style={styles.sectionTitle}>{t('notifications.preferences')}</Text>
+        {PREF_KEYS.map((key) => (
+          <View key={key} style={styles.notificationItem}>
             <View style={styles.notificationTextContainer}>
-              <Text style={styles.notificationTitle}>{item.title}</Text>
-              <Text style={styles.notificationDescription}>{item.description}</Text>
+              <Text style={styles.notificationTitle}>{t(`notifications.${key}`)}</Text>
+              <Text style={styles.notificationDescription}>{t(`notifications.${key}Desc`)}</Text>
             </View>
             <Switch
-              value={item.enabled}
-              onValueChange={() => toggleNotification(item.id)}
+              value={prefs[key]}
+              onValueChange={() => togglePref(key)}
               trackColor={{ false: colors.surfaceContainerHighest, true: colors.primary }}
-              thumbColor={item.enabled ? colors.onPrimary : colors.onSurfaceVariant}
+              thumbColor={prefs[key] ? colors.onPrimary : colors.onSurfaceVariant}
             />
           </View>
-        ))}
-
-        <Text style={[styles.sectionTitle, styles.sectionTitleMargin]}>Notification History</Text>
-        {history.map((item) => (
-          <TouchableOpacity key={item.id} style={[styles.historyItem, !item.read && styles.historyItemUnread]}>
-            <View style={styles.historyIconContainer}>
-              <Ionicons
-                name={
-                  item.type === 'ride'
-                    ? 'car'
-                    : item.type === 'promotion'
-                    ? 'pricetag'
-                    : 'shield-checkmark'
-                }
-                size={20}
-                color={item.read ? colors.onSurfaceVariant : colors.primary}
-              />
-            </View>
-            <View style={styles.historyTextContainer}>
-              <Text style={[styles.historyTitle, !item.read && styles.historyTitleUnread]}>{item.title}</Text>
-              <Text style={styles.historyMessage}>{item.message}</Text>
-              <Text style={styles.historyTime}>{item.time}</Text>
-            </View>
-            {!item.read && <View style={styles.unreadDot} />}
-          </TouchableOpacity>
         ))}
       </ScrollView>
     </SafeAreaView>

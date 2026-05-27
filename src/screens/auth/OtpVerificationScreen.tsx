@@ -18,6 +18,7 @@ import { Card } from '../../components/common/Card';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { formatAlgerianE164Display } from '../../utils/phone';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OtpVerification'>;
 
@@ -71,15 +72,6 @@ export const OtpVerificationScreen: React.FC<Props> = ({
     }
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    // Format Algerian number: +213 XXX XXX XXX
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 9) {
-      return `+213 ${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`;
-    }
-    return `+213 ${phone}`;
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -98,7 +90,7 @@ export const OtpVerificationScreen: React.FC<Props> = ({
             {t('auth.enterOtp')}
           </Text>
           <Text style={styles.phoneNumber}>
-            {formatPhoneNumber(phoneNumber)}
+            {formatAlgerianE164Display(phoneNumber)}
           </Text>
         </View>
 

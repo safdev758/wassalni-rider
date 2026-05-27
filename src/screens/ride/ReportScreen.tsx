@@ -3,45 +3,56 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 
+import { RootStackParamList } from '../../navigation/RootNavigator';
 import { useRide } from '../../context/RideContext';
-import { reportAPI } from '../../services/api';
+import { safetyAPI } from '../../services/api';
+import { getGpsTrace } from '../../services/rideGpsTrace';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 
-const REPORT_CATEGORIES = [
-  { id: 'safety', icon: 'shield', label: 'Safety Issue' },
-  { id: 'behavior', icon: 'person', label: 'Driver Behavior' },
-  { id: 'vehicle_condition', icon: 'car', label: 'Vehicle Condition' },
-  { id: 'payment', icon: 'card', label: 'Payment Issue' },
-  { id: 'app_issue', icon: 'phone-portrait', label: 'App Issue' },
-];
+const REPORT_CATEGORY_IDS = [
+  { id: 'verbal_abuse', icon: 'megaphone' },
+  { id: 'physical_threat', icon: 'alert-circle' },
+  { id: 'unsafe_driving', icon: 'car' },
+  { id: 'wrong_route', icon: 'navigate' },
+  { id: 'harassment', icon: 'warning' },
+  { id: 'other', icon: 'ellipsis-horizontal' },
+] as const;
 
 export const ReportScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'Report'>>();
   const { rideId, driver } = useRide();
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const pendingEvidenceId = route.params?.pendingEvidenceId;
+  const initialReason = route.params?.reasonCode ?? '';
+  const [selectedCategory, setSelectedCategory] = useState(initialReason);
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!selectedCategory || !description.trim()) {
+    if (!selectedCategory) {
+      Alert.alert(t('common.error'), t('report.fillRequired'));
+      return;
+    }
+    if (!pendingEvidenceId && !description.trim()) {
       Alert.alert(t('common.error'), t('report.fillRequired'));
       return;
     }
 
     setSubmitting(true);
     try {
-      await reportAPI.create({
-        subject_type: 'driver',
-        subject_id: driver?.id || '',
-        ride_id: rideId || undefined,
-        category: selectedCategory,
-        description: description.trim(),
-      });
+      const notes = description.trim() || (pendingEvidenceId ? t('report.confirmedMlNote') : '');
+      await safetyAPI.reportButton(
+        rideId || '',
+        selectedCategory,
+        notes,
+        getGpsTrace(),
+        pendingEvidenceId,
+      );
       Alert.alert(t('report.submitted'), t('report.thankYou'));
       navigation.goBack();
     } catch (error) {
@@ -62,9 +73,20 @@ export const ReportScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {pendingEvidenceId ? (
+          <View style={styles.evidenceBanner}>
+            <Ionicons name="mic" size={20} color={colors.primary} />
+            <Text style={styles.evidenceBannerText}>{t('report.audioEvidenceAttached')}</Text>
+          </View>
+        ) : null}
+        {driver ? (
+          <Text style={styles.driverHint}>
+            {t('report.driverOnTrip', { name: driver.name, plate: driver.plate })}
+          </Text>
+        ) : null}
         <Text style={styles.sectionTitle}>{t('report.selectCategory')}</Text>
         <View style={styles.categoriesGrid}>
-          {REPORT_CATEGORIES.map((cat) => (
+          {REPORT_CATEGORY_IDS.map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={[styles.categoryCard, selectedCategory === cat.id && styles.categoryCardSelected]}
@@ -72,7 +94,7 @@ export const ReportScreen: React.FC = () => {
             >
               <Ionicons name={cat.icon as never} size={24} color={selectedCategory === cat.id ? colors.primary : colors.onSurfaceVariant} />
               <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelSelected]}>
-                {cat.label}
+                {t(`report.categories.${cat.id}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -85,7 +107,7 @@ export const ReportScreen: React.FC = () => {
           numberOfLines={4}
           value={description}
           onChangeText={setDescription}
-          placeholder={t('report.describePlaceholder')}
+          placeholder={t('report.descriptionPlaceholder')}
           placeholderTextColor={colors.onSurfaceVariant}
           textAlignVertical="top"
         />
@@ -149,5 +171,19 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontFamily: typography.fontFamily.headline, fontSize: typography.fontSize.bodyLarge,
     fontWeight: '600' as never, color: colors.surface,
+  },
+  evidenceBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primary + '14', borderRadius: spacing.borderRadius.lg,
+    padding: spacing.md, marginBottom: spacing.sm,
+  },
+  evidenceBannerText: {
+    flex: 1,
+    fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurface, fontWeight: '600' as never,
+  },
+  driverHint: {
+    fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.bodySmall,
+    color: colors.onSurfaceVariant, marginBottom: spacing.sm,
   },
 });

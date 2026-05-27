@@ -17,12 +17,14 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 export const SearchingScreen: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation<NavProp>();
-  const { cancelRide, state } = useRide();
+  const { cancelRide, state, counterOffers, acceptCounterOffer, selectedOption } = useRide();
 
-  // Auto-navigate when driver found
   useEffect(() => {
     if (state === 'ride_options') {
       navigation.replace('RideOptions');
+    }
+    if (state === 'driver_found') {
+      navigation.replace('DriverFound');
     }
   }, [state, navigation]);
 
@@ -53,10 +55,23 @@ export const SearchingScreen: React.FC = () => {
           </View>
         </View>
 
-        <Text style={styles.title}>Finding your driver...</Text>
-        <Text style={styles.subtitle}>
-          Matching you with the nearest premium vehicle.
-        </Text>
+        <Text style={styles.title}>{t('ride.searchingTitle')}</Text>
+        <Text style={styles.subtitle}>{t('ride.searchingSubtitle')}</Text>
+
+        {counterOffers.length > 0 && (
+          <View style={styles.offersBox}>
+            {counterOffers.map((offer) => (
+              <TouchableOpacity
+                key={offer.offerId}
+                style={styles.offerCard}
+                onPress={() => acceptCounterOffer(offer)}
+              >
+                <Text style={styles.offerName}>{offer.driverName}</Text>
+                <Text style={styles.offerPrice}>{offer.offeredPrice} DZD</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Context card */}
         <View style={styles.contextCard}>
@@ -64,8 +79,14 @@ export const SearchingScreen: React.FC = () => {
             <Ionicons name="car" size={20} color={colors.onSurfaceVariant} />
           </View>
           <View>
-            <Text style={styles.contextTitle}>{t('rideOptions.wasselniPremium')}</Text>
-            <Text style={styles.contextSubtitle}>Est. wait 2-4 mins</Text>
+            <Text style={styles.contextTitle}>
+              {selectedOption?.name ?? t('rideOptions.wasselniCore')}
+            </Text>
+            <Text style={styles.contextSubtitle}>
+              {selectedOption
+                ? t('rideOptions.driverEta', { eta: selectedOption.eta.replace(/\s*min$/, '') })
+                : t('ride.searchingSubtitle')}
+            </Text>
           </View>
         </View>
       </View>
@@ -80,7 +101,7 @@ export const SearchingScreen: React.FC = () => {
           }}
           activeOpacity={0.95}
         >
-          <Text style={styles.cancelButtonText}>Cancel Ride</Text>
+          <Text style={styles.cancelButtonText}>{t('ride.cancelRide')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -201,6 +222,29 @@ const styles = StyleSheet.create({
     borderRadius: spacing.borderRadius.xl,
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  offersBox: {
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  offerCard: {
+    backgroundColor: colors.primary + '22',
+    borderRadius: spacing.borderRadius.lg,
+    padding: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  offerName: {
+    ...typography.bodyMedium,
+    color: colors.onSurface,
+    fontWeight: '600' as const,
+  },
+  offerPrice: {
+    ...typography.bodyMedium,
+    color: colors.primary,
+    fontWeight: '700' as const,
   },
   cancelButtonText: {
     fontFamily: typography.fontFamily.headline,

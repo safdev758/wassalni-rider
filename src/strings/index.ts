@@ -30,6 +30,8 @@ i18n
     },
     lng: defaultLanguage,
     fallbackLng: 'en',
+    // Hermes lacks full Intl.PluralRules — v3 avoids @formatjs polyfill crashes on Android
+    compatibilityJSON: 'v3',
     interpolation: {
       escapeValue: false,
     },
